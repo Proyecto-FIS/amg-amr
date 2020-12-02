@@ -3,8 +3,8 @@
     "version": "1.0.0",
     "description": "Backend for microservice",
     "scripts": {
-        "start": "node -r dotenv/config source/index.js dotenv_config_path=env/devel.env",
-        "start:prod": "node -r dotenv/config source/index.js dotenv_config_path=env/prod.env",
+        "start": "node -r dotenv/config source/boot.js dotenv_config_path=env/devel.env",
+        "start:prod": "node -r dotenv/config source/boot.js dotenv_config_path=env/prod.env",
         "test": "jest ./test",
         "coverage": "nyc npm test"
     },
