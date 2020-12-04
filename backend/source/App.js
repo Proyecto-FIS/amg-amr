@@ -6,13 +6,13 @@ class App {
         this.app = express();
         this.router = express.Router();
         this.server = null;
-        this.app.use(express.json());
-        this.registerRoutes();
-    }
 
-    registerRoutes() {
-        // TODO Register routes
+        this.app.use(express.json());
         this.app.use(this.router);
+
+        // Route registration
+        require("./routes/example").register(this.router);
+
         this.app.use(App.errorHandler);
     }
 
@@ -21,7 +21,9 @@ class App {
     }
 
     run(done) {
-        this.server = this.app.listen(process.env.PORT, () => {
+        const port = process.env.PORT || 8080;
+        this.server = this.app.listen(port, () => {
+            console.log(`[SERVER] Running at port ${port}`);
             done();
         });
     }
