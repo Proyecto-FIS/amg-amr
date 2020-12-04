@@ -1,7 +1,7 @@
 const express = require("express");
 
 example = (req, res) => {
-    res.send("OK");
+    res.send("GitHub actions working");
 }
 
 module.exports.register = (router) => {
