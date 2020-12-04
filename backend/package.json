@@ -1,0 +1,23 @@
+{
+    "name": "backend",
+    "version": "1.0.0",
+    "description": "Backend for microservice",
+    "scripts": {
+        "start": "node -r dotenv/config source/boot.js dotenv_config_path=env/devel.env",
+        "start:prod": "node -r dotenv/config source/boot.js dotenv_config_path=env/prod.env",
+        "test": "jest ./test",
+        "coverage": "nyc npm test"
+    },
+    "author": "amg98@github.com, a8081@github.com",
+    "license": "MIT",
+    "dependencies": {
+        "dotenv": "^8.2.0",
+        "express": "^4.17.1",
+        "mongoose": "^5.11.1"
+    },
+    "devDependencies": {
+        "@types/express": "^4.17.9",
+        "jest": "^26.6.3",
+        "nyc": "^15.1.0"
+    }
+}
