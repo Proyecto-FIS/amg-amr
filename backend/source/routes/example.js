@@ -1,7 +1,7 @@
 const express = require("express");
 
 example = (req, res) => {
-    res.send("GitHub actions working");
+    res.send("Coffaine - Sales microservice");
 }
 
 module.exports.register = (router) => {
