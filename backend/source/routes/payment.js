@@ -1,13 +1,28 @@
 const express = require("express");
 
 /**
- * This function comment is parsed by doctrine
- * @route GET /api
- * @group foo - Operations about user
- * @param {string} email.query.required - username or email - eg: user@domain
- * @param {string} password.query.required - user's password.
- * @returns {object} 200 - An array of user info
- * @returns {Error}  default - Unexpected error
+ * @typedef Cart
+ * @property {Array.<Product>} products.required - List of product to buy
+ */
+
+/**
+ * @typedef Product
+ * @property {string} todo - TODO
+ */
+
+/**
+ * @typedef PaymentError
+ * @property {string} code.required
+ */
+
+/**
+ * This function executes a standalone payment
+ * @route POST /payment
+ * @group payment - Payment operations
+ * @param {Cart.model}      cart.body.required       - Cart with items to buy
+ * @param {string}          userToken.body.required  - TODO
+ * @returns {integer}       200 - Payment ID
+ * @returns {PaymentError}  default - Unexpected error
  */
 const postMethod = (req, res) => {
     res.send("Coffaine - Sales microservice");

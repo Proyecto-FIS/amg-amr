@@ -1,5 +1,6 @@
 const express = require("express");
 const expressSwagger = require('express-swagger-generator');
+const swagger = require("express-swagger-generator/lib/swagger");
 
 const swaggerOptions = {
     swaggerDefinition: {
@@ -9,10 +10,9 @@ const swaggerOptions = {
             version: '1.0.0',
         },
         host: 'localhost:3000',
-        basePath: '/v1',
+        basePath: '/api/v1',
         produces: [
             "application/json",
-            "application/xml"
         ],
         schemes: ['http', 'https'],
 		securityDefinitions: {
@@ -38,9 +38,8 @@ class App {
         this.app.use(express.json());
         this.app.use(this.router);
 
-        const apiPrefix = "/api/v1";
-
         // Route registration
+        const apiPrefix = swaggerOptions.swaggerDefinition.basePath;
         require("./routes/billing-profile").register(apiPrefix, this.router);
         require("./routes/history").register(apiPrefix, this.router);
         require("./routes/payment").register(apiPrefix, this.router);
