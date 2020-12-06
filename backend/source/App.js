@@ -1,4 +1,32 @@
 const express = require("express");
+const expressSwagger = require('express-swagger-generator');
+
+const swaggerOptions = {
+    swaggerDefinition: {
+        info: {
+            description: 'This is a sample server',
+            title: 'Swagger',
+            version: '1.0.0',
+        },
+        host: 'localhost:3000',
+        basePath: '/v1',
+        produces: [
+            "application/json",
+            "application/xml"
+        ],
+        schemes: ['http', 'https'],
+		securityDefinitions: {
+            JWT: {
+                type: 'apiKey',
+                in: 'header',
+                name: 'Authorization',
+                description: "",
+            }
+        }
+    },
+    basedir: __dirname, //app absolute path
+    files: ['./routes/**/*.js'] //Path to the API handle folder
+};
 
 class App {
 
@@ -10,10 +38,18 @@ class App {
         this.app.use(express.json());
         this.app.use(this.router);
 
+        const apiPrefix = "/api/v1";
+
         // Route registration
-        require("./routes/example").register(this.router);
+        require("./routes/billing-profile").register(apiPrefix, this.router);
+        require("./routes/history").register(apiPrefix, this.router);
+        require("./routes/payment").register(apiPrefix, this.router);
+        require("./routes/return").register(apiPrefix, this.router);
+        require("./routes/subscription").register(apiPrefix, this.router);
 
         this.app.use(App.errorHandler);
+
+        expressSwagger(this.app)(swaggerOptions);
     }
 
     static errorHandler(err, req, res, next) {
