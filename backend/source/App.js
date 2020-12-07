@@ -1,5 +1,6 @@
 const express = require("express");
 const swagger = require("./swagger");
+const db = require("./database");
 
 class App {
 
@@ -30,16 +31,23 @@ class App {
     }
 
     run(done) {
-        this.server = this.app.listen(this.port, () => {
-            console.log(`[SERVER] Running at port ${this.port}`);
-            done();
+
+        process.on("SIGINT", () => {
+            this.stop(() => console.log("[SERVER] Shut down requested by user"));
+        });
+
+        db.setupConnection(() => {
+            this.server = this.app.listen(this.port, () => {
+                console.log(`[SERVER] Running at port ${this.port}`);
+                done();
+            });
         });
     }
 
     stop(done) {
         if(this.server == null) return;
         this.server.close(() => {
-            done();
+            db.closeConnection(done);
         })
     }
 }
