@@ -18,7 +18,7 @@ module.exports.setupSwagger = (app, port) => {
             produces: [
                 "application/json",
             ],
-            schemes: ['http'],
+            schemes: [process.env.SWAGGER_SCHEMA],
             securityDefinitions: {
                 JWT: {
                     type: 'apiKey',
