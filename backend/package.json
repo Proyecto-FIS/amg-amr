@@ -7,7 +7,7 @@
         "start:prod": "node -r dotenv/config source/boot.js dotenv_config_path=env/prod.env",
         "test": "jest ./test",
         "coverage": "nyc npm test",
-        "swagger": "node source/swagger-gen.js"
+        "postinstall": "link-module-alias"
     },
     "author": "amg98@github.com, a8081@github.com",
     "license": "MIT",
