@@ -34,6 +34,18 @@ class Validators {
             }
         }
     }
+
+    static ToDate(fieldName) {
+        return (req, res, next) => {
+            const d = new Date(req.fieldName);
+            if(d instanceof Date && !isNaN(d)) {
+                req.fieldName = d;
+                next();
+            } else {
+                res.status(400).json({ reason: "Date parsing failed" });
+            }
+        }
+    }
 }
 
 module.exports = Validators;
