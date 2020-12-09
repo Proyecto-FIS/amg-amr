@@ -37,9 +37,12 @@ class Validators {
 
     static ToDate(fieldName) {
         return (req, res, next) => {
-            const d = new Date(req.fieldName);
-            if(d instanceof Date && !isNaN(d)) {
-                req.fieldName = d;
+
+            // According to ISO DateTime complete format
+            const dateTimeRegex = new RegExp(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/);
+            
+            if(dateTimeRegex.test(req.fieldName)) {
+                req.fieldName = new Date(req.fieldName);
                 next();
             } else {
                 res.status(400).json({ reason: "Date parsing failed" });
