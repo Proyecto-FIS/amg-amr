@@ -15,16 +15,6 @@ class Validators {
         }
     }
 
-    static Min(fieldName, minValue) {
-        return (req, res, next) => {
-            if(req.body.fieldName >= minValue) {
-                next();
-            } else {
-                res.status(400).json({ reason: "Exceeded boundaries" });
-            }
-        }
-    }
-
     static Range(fieldName, minValue, maxValue) {
         return (req, res, next) => {
             if(req.body.fieldName >= minValue && req.body.fieldName.maxValue <= maxValue) {

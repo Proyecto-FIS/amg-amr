@@ -53,6 +53,17 @@ class HistoryController {
         });
     }
 
+    createEntry(entry, done, error) {
+        const historyEntry = new HistoryEntry(entry);
+        historyEntry.save((err, storedEntry) => {
+            if(err || !storedEntry) {
+                error();
+            } else {
+                done();
+            }
+        });
+    }
+
     constructor(apiPrefix, router) {
         const beforeTimestampValidators = [Validators.Required("beforeTimestamp"), Validators.ToDate("beforeTimestamp")];
         const pageSizeValidators = [Validators.Required("pageSize"), Validators.Range("pageSize", 1, 20)];
