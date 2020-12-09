@@ -1,32 +1,6 @@
 const express = require("express");
-const expressSwagger = require('express-swagger-generator');
-const swagger = require("express-swagger-generator/lib/swagger");
-
-const swaggerOptions = {
-    swaggerDefinition: {
-        info: {
-            description: 'This is a sample server',
-            title: 'Swagger',
-            version: '1.0.0',
-        },
-        host: 'localhost:3000',
-        basePath: '/api/v1',
-        produces: [
-            "application/json",
-        ],
-        schemes: ['http', 'https'],
-		securityDefinitions: {
-            JWT: {
-                type: 'apiKey',
-                in: 'header',
-                name: 'Authorization',
-                description: "",
-            }
-        }
-    },
-    basedir: __dirname, //app absolute path
-    files: ['./routes/**/*.js'] //Path to the API handle folder
-};
+const swagger = require("./swagger");
+const db = require("./database");
 
 class App {
 
@@ -34,12 +8,13 @@ class App {
         this.app = express();
         this.router = express.Router();
         this.server = null;
+        this.port = process.env.PORT || 8080;
 
         this.app.use(express.json());
         this.app.use(this.router);
 
         // Route registration
-        const apiPrefix = swaggerOptions.swaggerDefinition.basePath;
+        const apiPrefix = swagger.getBasePath();
         require("./routes/billing-profile").register(apiPrefix, this.router);
         require("./routes/history").register(apiPrefix, this.router);
         require("./routes/payment").register(apiPrefix, this.router);
@@ -48,7 +23,7 @@ class App {
 
         this.app.use(App.errorHandler);
 
-        expressSwagger(this.app)(swaggerOptions);
+        swagger.setupSwagger(this.app, this.port);
     }
 
     static errorHandler(err, req, res, next) {
@@ -56,17 +31,23 @@ class App {
     }
 
     run(done) {
-        const port = process.env.PORT || 8080;
-        this.server = this.app.listen(port, () => {
-            console.log(`[SERVER] Running at port ${port}`);
-            done();
+
+        process.on("SIGINT", () => {
+            this.stop(() => console.log("[SERVER] Shut down requested by user"));
+        });
+
+        db.setupConnection(() => {
+            this.server = this.app.listen(this.port, () => {
+                console.log(`[SERVER] Running at port ${this.port}`);
+                done();
+            });
         });
     }
 
     stop(done) {
         if(this.server == null) return;
         this.server.close(() => {
-            done();
+            db.closeConnection(done);
         })
     }
 }
