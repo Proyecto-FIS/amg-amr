@@ -4,7 +4,7 @@
  */
 
 const AuthorizeJWT = (req, res, next) => {
-    // TODO Check user authorization & return user ID at req.userID
+    // TODO Check user authorization & return user ID at req.body.userID
     next();
 }
 

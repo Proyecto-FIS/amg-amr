@@ -1,12 +1,13 @@
 const { string } = require("yargs");
-const Validators = require("../source/middlewares/Validators");
+const Validators = require("../../source/middlewares/Validators");
 
 describe("Validators", () => {
 
-    let mockedRes = {};
-    let mockedNext = {};
+    let mockedRes;
+    let mockedNext;
 
     beforeEach(() => {
+        mockedRes = {};
         mockedRes.status = jest.fn().mockReturnValue(mockedRes);
         mockedRes.json = jest.fn().mockReturnValue(mockedRes);
         mockedNext = jest.fn();
