@@ -1,13 +1,12 @@
 {
     "name": "backend",
     "version": "1.0.0",
-    "description": "Backend for microservice",
+    "description": "Backend for sales microservice",
     "scripts": {
         "start": "node -r dotenv/config source/boot.js dotenv_config_path=env/devel.env",
         "start:prod": "node -r dotenv/config source/boot.js dotenv_config_path=env/prod.env",
         "test": "jest ./test",
-        "coverage": "nyc npm test",
-        "postinstall": "link-module-alias"
+        "coverage": "nyc npm test"
     },
     "author": "amg98@github.com, a8081@github.com",
     "license": "MIT",
