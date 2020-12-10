@@ -23,11 +23,6 @@ jobs:
         uses: supercharge/mongodb-github-action@1.3.0
         with:
           mongodb-version: ${{ matrix.mongodb-version }}
-
-      - name: Frontend testing
-        working-directory: ./frontend
-        run: npm install && npm install -D && npm run test:ci
       
       - name: Backend testing
-        working-directory: ./backend
         run: npm install && npm install -D && npm test
