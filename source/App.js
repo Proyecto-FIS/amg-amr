@@ -1,6 +1,6 @@
 const express = require("express");
 const swagger = require("./swagger");
-const db = require("./database");
+const DatabaseConnection = require("./DatabaseConnection");
 const HistoryController = require("./routes/HistoryController");
 
 class App {
@@ -10,6 +10,7 @@ class App {
         this.router = express.Router();
         this.server = null;
         this.port = process.env.PORT || 8080;
+        this.db = new DatabaseConnection();
 
         this.app.use(express.json());
         this.app.use(this.router);
@@ -37,7 +38,7 @@ class App {
             this.stop(() => console.log("[SERVER] Shut down requested by user"));
         });
 
-        db.setupConnection(() => {
+        this.db.setup(() => {
             this.server = this.app.listen(this.port, () => {
                 console.log(`[SERVER] Running at port ${this.port}`);
                 done();
@@ -48,7 +49,7 @@ class App {
     stop(done) {
         if(this.server == null) return;
         this.server.close(() => {
-            db.closeConnection(done);
+            this.db.close(done);
         })
     }
 }
