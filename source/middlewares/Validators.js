@@ -27,12 +27,11 @@ class Validators {
 
     static ToDate(fieldName) {
         return (req, res, next) => {
-
-            // According to ISO DateTime complete format
-            const dateTimeRegex = new RegExp(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/);
             
-            if(dateTimeRegex.test(req[fieldName])) {
-                req[fieldName] = new Date(req[fieldName]);
+            const date = new Date(req.body[fieldName]);
+            if(date instanceof Date && !isNaN(date.valueOf())) {
+                date.getUTC
+                req.body[fieldName] = date;
                 next();
             } else {
                 res.status(400).json({ reason: "Date parsing failed" });
