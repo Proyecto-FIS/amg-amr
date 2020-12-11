@@ -1,6 +1,7 @@
 const express = require("express");
 const swagger = require("./swagger");
 const db = require("./database");
+const HistoryController = require("./routes/HistoryController");
 
 class App {
 
@@ -16,7 +17,7 @@ class App {
         // Route registration
         const apiPrefix = swagger.getBasePath();
         require("./routes/billing-profile").register(apiPrefix, this.router);
-        require("./routes/history").register(apiPrefix, this.router);
+        this.historyController = new HistoryController(apiPrefix, this.router);
         require("./routes/payment").register(apiPrefix, this.router);
         require("./routes/return").register(apiPrefix, this.router);
         require("./routes/subscription").register(apiPrefix, this.router);
