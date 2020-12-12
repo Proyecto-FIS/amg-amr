@@ -60,6 +60,11 @@ class HistoryController {
         return historyEntry.save();
     }
 
+    createEntries(entries) {
+        const promises = entries.map(entry => this.createEntry(entry));
+        return Promise.all(promises);
+    }
+
     constructor(apiPrefix, router) {
         const beforeTimestampValidators = [Validators.Required("beforeTimestamp"), Validators.ToDate("beforeTimestamp")];
         const pageSizeValidators = [Validators.Required("pageSize"), Validators.Range("pageSize", 1, 20)];

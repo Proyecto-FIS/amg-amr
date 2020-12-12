@@ -5,11 +5,42 @@ const mongoose = require("mongoose");
 describe("HistoryController", () => {
 
     const db = new DatabaseConnection();
+    let controller;
+    let mockedRes;
+    let preload;
+    const preloadEntries = 5;
+    const sampleProduct = {
+        _id: mongoose.Types.ObjectId(1),
+        quantity: 5,
+        unitPriceEuros: 20
+    };
 
     beforeAll((done) => {
-        db.setup(() => {
-            mongoose.connection.dropCollection("historyentries", err => done());
-        });
+
+        // Create controller with mocked router
+        const mockedRouter = {
+            get: (path, ...middlewares) => { }
+        };
+
+        controller = new HistoryController("test", mockedRouter);
+        
+        // Create database preload for some tests
+        preload = [];
+        for (let i = 0; i < preloadEntries; i++) {
+            preload.push({
+                userID: mongoose.Types.ObjectId(i),
+                timestamp: new Date(),
+                operationType: "payment",
+                products: [sampleProduct]
+            });
+        }
+
+        db.setup(done);
+    });
+
+    beforeEach((done) => {
+        mockedRes = {};
+        mongoose.connection.dropCollection("historyentries", err => done());
     });
 
     afterAll((done) => {
@@ -34,13 +65,6 @@ describe("HistoryController", () => {
             ]
         };
 
-        // Create route controller
-        const mockedRouter = {
-            get: (path, ...middlewares) => { }
-        };
-
-        const controller = new HistoryController("test", mockedRouter);
-
         // Entry to be added
         const testEntry = {
             userID: userID,
@@ -54,8 +78,10 @@ describe("HistoryController", () => {
             .then(() => {
 
                 // Create a mock for response object
-                let mockedRes = {};
-                mockedRes.status = jest.fn().mockReturnValue(mockedRes);
+                mockedRes.status = jest.fn().mockImplementation((code) => {
+                    expect(code).toBe(200);
+                    return mockedRes;
+                });
                 mockedRes.json = jest.fn().mockImplementation((data) => {
                     expect(data.length).toBe(1);
                     expect(data[0].timestamp).toStrictEqual(expectedResult.timestamp);
@@ -68,26 +94,130 @@ describe("HistoryController", () => {
                 controller.getMethod({
                     body: {
                         userID: userID,
-                        beforeTimestamp: Date.now(),
+                        beforeTimestamp: new Date(),
                         pageSize: 5
                     }
                 }, mockedRes);
             });
     });
 
-    test("Missing user", () => {
-        // TODO
+    test("Should return empty set", (done) => {
+
+        // Create a mock for response object
+        mockedRes.status = jest.fn().mockImplementation((code) => {
+            expect(code).toBe(200);
+            return mockedRes;
+        });
+        mockedRes.json = jest.fn().mockImplementation((data) => {
+            expect(data.length).toBe(0);
+            done();
+        });
+
+        controller.getMethod({
+            body: {
+                userID: mongoose.Types.ObjectId(),
+                beforeTimestamp: new Date(),
+                pageSize: 10
+            }
+        }, mockedRes);
     });
 
-    test("Should return empty set", () => {
-        // TODO
+    test("Missing user", (done) => {
+
+        // Preload database
+        controller.createEntries(preload)
+            .then(() => {
+
+                // Create a mock for response object
+                mockedRes.status = jest.fn().mockImplementation((code) => {
+                    expect(code).toBe(200);
+                    return mockedRes;
+                });
+                mockedRes.json = jest.fn().mockImplementation((data) => {
+                    expect(data.length).toBe(0);
+                    done();
+                });
+
+                // Request for an entry that should not exist
+                controller.getMethod({
+                    body: {
+                        userID: mongoose.Types.ObjectId(preloadEntries + 1),
+                        beforeTimestamp: new Date(),
+                        pageSize: 10
+                    }
+                }, mockedRes);
+            });
     });
 
-    test("Multiple entries & selection by date", () => {
-        // TODO
+    test("Multiple entries & selection by date and user", (done) => {
+        
+        let thresholdDate = Date.now();
+
+        // Preload database
+        controller.createEntries(preload)
+            .then(() => {
+                return controller.createEntry({
+                    userID: preload[0].userID,
+                    timestamp: new Date(thresholdDate + 100),
+                    operationType: "payment",
+                    products: [sampleProduct]
+                })
+            })
+            .then(() => {
+
+                // Create a mock for response object
+                mockedRes.status = jest.fn().mockImplementation((code) => {
+                    expect(code).toBe(200);
+                    return mockedRes;
+                });
+                mockedRes.json = jest.fn().mockImplementation((data) => {
+                    expect(data.length).toBe(1);
+                    expect(data[0].timestamp).toStrictEqual(preload[0].timestamp);
+                    expect(data[0].operationType).toBe(preload[0].operationType);
+                    expect(data[0].products).toMatchObject(preload[0].products);
+                    done();
+                });
+
+                // Request for an entry that should not exist
+                controller.getMethod({
+                    body: {
+                        userID: preload[0].userID,
+                        beforeTimestamp: thresholdDate,
+                        pageSize: 10
+                    }
+                }, mockedRes);
+            });
     });
 
-    test("Multiple entries & selection by user", () => {
-        // TODO
+    test("Page size limits", (done) => {
+
+        let modPreload = preload;
+        const userID = mongoose.Types.ObjectId(100);
+        for(let i = 0; i < preloadEntries; i++) {
+            modPreload[i].userID = userID;
+        }
+        controller.createEntries(preload)
+            .then(() => {
+
+                // Create a mock for response object
+                mockedRes.status = jest.fn().mockImplementation((code) => {
+                    expect(code).toBe(200);
+                    return mockedRes;
+                });
+                mockedRes.json = jest.fn().mockImplementation((data) => {
+                    expect(data.length).toBe(3);
+                    done();
+                });
+
+                // Request for an entry that should not exist
+                controller.getMethod({
+                    body: {
+                        userID: userID,
+                        beforeTimestamp: new Date(),
+                        pageSize: 3
+                    }
+                }, mockedRes);
+            });
+        done();
     });
 });
