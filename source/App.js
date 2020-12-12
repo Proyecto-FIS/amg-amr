@@ -29,7 +29,7 @@ class App {
     }
 
     static errorHandler(err, req, res, next) {
-        res.status(500).json({ status: false, msg: err });
+        res.status(500).json({ msg: err });
     }
 
     run(done) {

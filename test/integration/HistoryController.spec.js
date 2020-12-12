@@ -43,9 +43,7 @@ describe("HistoryController", () => {
         mongoose.connection.dropCollection("historyentries", err => done());
     });
 
-    afterAll((done) => {
-        db.close(done);
-    });
+    afterAll(done => db.close(done));
 
     test("Write & read single entry", (done) => {
 
