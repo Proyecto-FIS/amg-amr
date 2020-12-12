@@ -43,7 +43,7 @@ class HistoryController {
             timestamp: { $lte: req.body.beforeTimestamp }
         })
         .select("timestamp operationType products")
-        .limit(req.pageSize)
+        .limit(req.body.pageSize)
         .sort("-timestamp")
         .lean()
         .exec((err, entries) => {

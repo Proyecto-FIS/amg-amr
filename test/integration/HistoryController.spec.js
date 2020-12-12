@@ -193,10 +193,11 @@ describe("HistoryController", () => {
 
         let modPreload = preload;
         const userID = mongoose.Types.ObjectId(100);
+        const pageSize = 3;
         for(let i = 0; i < preloadEntries; i++) {
             modPreload[i].userID = userID;
         }
-        controller.createEntries(preload)
+        controller.createEntries(modPreload)
             .then(() => {
 
                 // Create a mock for response object
@@ -205,7 +206,7 @@ describe("HistoryController", () => {
                     return mockedRes;
                 });
                 mockedRes.json = jest.fn().mockImplementation((data) => {
-                    expect(data.length).toBe(3);
+                    expect(data.length).toBe(pageSize);
                     done();
                 });
 
@@ -214,10 +215,9 @@ describe("HistoryController", () => {
                     body: {
                         userID: userID,
                         beforeTimestamp: new Date(),
-                        pageSize: 3
+                        pageSize: pageSize
                     }
                 }, mockedRes);
             });
-        done();
     });
 });
