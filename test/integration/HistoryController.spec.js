@@ -16,7 +16,7 @@ describe("HistoryController", () => {
         db.close(done);
     });
 
-    test("Write & read OK", (done) => {
+    test("Write & read single entry", (done) => {
 
         const userID = mongoose.Types.ObjectId(1);
         const now = new Date();
@@ -73,5 +73,21 @@ describe("HistoryController", () => {
                     }
                 }, mockedRes);
             });
+    });
+
+    test("Missing user", () => {
+        // TODO
+    });
+
+    test("Should return empty set", () => {
+        // TODO
+    });
+
+    test("Multiple entries & selection by date", () => {
+        // TODO
+    });
+
+    test("Multiple entries & selection by user", () => {
+        // TODO
     });
 });
