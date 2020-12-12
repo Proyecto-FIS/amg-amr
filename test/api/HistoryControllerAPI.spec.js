@@ -10,22 +10,27 @@ describe("HistoryController API", () => {
     beforeEach((done) => mongoose.connection.dropCollection("historyentries", err => done()));
 
     test("Wrong user", (done) => {
+        // TODO
         done();
     });
 
     test("Page limit exceeded", (done) => {
+        // TODO
         done();
     });
 
     test("Correct user but no entries", (done) => {
+        // TODO
         done();
     });
 
     test("Correct user and has entries", (done) => {
+        // TODO
         done();
     });
 
     test("Select by date", (done) => {
+        // TODO
         done();
     });
 });
