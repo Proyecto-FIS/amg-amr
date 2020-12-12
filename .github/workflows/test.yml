@@ -26,3 +26,7 @@ jobs:
       
       - name: Backend testing
         run: npm install && npm install -D && npm test
+        env:
+          PORT: 8080
+          DBSTRING: mongodb://localhost:27017/coffaine-sales-test
+          SWAGGER_SCHEMA: http
