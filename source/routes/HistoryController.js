@@ -5,13 +5,14 @@ const Validators = require("../middlewares/Validators");
 
 /**
  * @typedef Product
- * @property {string} productID         - Product identifier
+ * @property {string} _id               - Product identifier
  * @property {number} quantity          - Number of products of this type
  * @property {number} unitPriceEuros    - Price per unit, in euros
  */
 
 /**
  * @typedef HistoryEntry
+ * @property {string} _id               - Unique identifier for this entry
  * @property {string} timestamp         - Date & time when the operation ocurred
  * @property {string} operationType     - "payment" or "subscription"
  * @property {Array.<Product>} products - Products which have been bought
@@ -38,12 +39,13 @@ class HistoryController {
      */
     getMethod(req, res) {
         HistoryEntry.find({
-            userID: req.userID,
-            timestamp: { $lte: req.beforeTimestamp }
+            userID: req.body.userID,
+            timestamp: { $lte: req.body.beforeTimestamp }
         })
-        .select("timestamp", "operationType", "products")
-        .limit(req.pageSize)
+        .select("timestamp operationType products")
+        .limit(req.body.pageSize)
         .sort("-timestamp")
+        .lean()
         .exec((err, entries) => {
             if(err) {
                 res.status(500).json({ reason: "Database error" });
@@ -53,15 +55,14 @@ class HistoryController {
         });
     }
 
-    createEntry(entry, done, error) {
+    createEntry(entry) {
         const historyEntry = new HistoryEntry(entry);
-        historyEntry.save((err, storedEntry) => {
-            if(err || !storedEntry) {
-                error();
-            } else {
-                done();
-            }
-        });
+        return historyEntry.save();
+    }
+
+    createEntries(entries) {
+        const promises = entries.map(entry => this.createEntry(entry));
+        return Promise.all(promises);
     }
 
     constructor(apiPrefix, router) {

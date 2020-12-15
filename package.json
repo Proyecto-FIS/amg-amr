@@ -5,8 +5,8 @@
     "scripts": {
         "start": "node -r dotenv/config source/boot.js dotenv_config_path=env/devel.env",
         "start:prod": "node -r dotenv/config source/boot.js dotenv_config_path=env/prod.env",
-        "test": "jest ./test",
-        "coverage": "nyc npm test"
+        "test": "jest ./test --silent",
+        "coverage": "npm test -- --coverage"
     },
     "author": "amg98@github.com, a8081@github.com",
     "license": "MIT",
@@ -17,9 +17,16 @@
     },
     "devDependencies": {
         "@types/express": "^4.17.9",
+        "@types/jest": "^26.0.18",
         "express-swagger-generator": "^1.1.17",
         "jest": "^26.6.3",
-        "nyc": "^15.1.0",
         "supertest": "^6.0.1"
+    },
+    "jest": {
+        "globalSetup": "./test/setup.js",
+        "collectCoverageFrom": [
+            "./source/**/*.js"
+        ],
+        "testEnvironment": "node"
     }
 }
