@@ -30,3 +30,6 @@ jobs:
           PORT: 8080
           DBSTRING: mongodb://localhost:27017/coffaine-sales-test
           SWAGGER_SCHEMA: http
+          USERS_MS: ${{secrets.USERS_MS}}
+          TEST_USERNAME: ${{secrets.TEST_USERNAME}}
+          TEST_PASSWORD: ${{secrets.TEST_PASSWORD}}

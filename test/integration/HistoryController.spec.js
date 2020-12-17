@@ -54,13 +54,7 @@ describe("HistoryController", () => {
         const expectedResult = {
             timestamp: now,
             operationType: "payment",
-            products: [
-                {
-                    _id: mongoose.Types.ObjectId(1),
-                    quantity: 5,
-                    unitPriceEuros: 20
-                }
-            ]
+            products: [sampleProduct]
         };
 
         // Entry to be added
@@ -90,8 +84,8 @@ describe("HistoryController", () => {
 
                 // Get the created entry
                 controller.getMethod({
-                    body: {
-                        userID: userID,
+                    userID: userID,
+                    query: {
                         beforeTimestamp: new Date(),
                         pageSize: 5
                     }
@@ -112,8 +106,8 @@ describe("HistoryController", () => {
         });
 
         controller.getMethod({
-            body: {
-                userID: mongoose.Types.ObjectId(),
+            userID: mongoose.Types.ObjectId(),
+            query: {
                 beforeTimestamp: new Date(),
                 pageSize: 10
             }
@@ -138,8 +132,8 @@ describe("HistoryController", () => {
 
                 // Request for an entry that should not exist
                 controller.getMethod({
-                    body: {
-                        userID: mongoose.Types.ObjectId(preloadEntries + 1),
+                    userID: mongoose.Types.ObjectId(preloadEntries + 1),
+                    query: {
                         beforeTimestamp: new Date(),
                         pageSize: 10
                     }
@@ -154,6 +148,8 @@ describe("HistoryController", () => {
         // Preload database
         controller.createEntries(preload)
             .then(() => {
+
+                // Additional entry for user with entries
                 return controller.createEntry({
                     userID: preload[0].userID,
                     timestamp: new Date(thresholdDate + 100),
@@ -169,17 +165,17 @@ describe("HistoryController", () => {
                     return mockedRes;
                 });
                 mockedRes.json = jest.fn().mockImplementation((data) => {
-                    expect(data.length).toBe(1);
+                    expect(data.length).toBe(1);    // Should return the entry before thresholdDate
                     expect(data[0].timestamp).toStrictEqual(preload[0].timestamp);
                     expect(data[0].operationType).toBe(preload[0].operationType);
                     expect(data[0].products).toMatchObject(preload[0].products);
                     done();
                 });
 
-                // Request for an entry that should not exist
+                // Get the history entries
                 controller.getMethod({
-                    body: {
-                        userID: preload[0].userID,
+                    userID: preload[0].userID,
+                    query: {
                         beforeTimestamp: thresholdDate,
                         pageSize: 10
                     }
@@ -208,10 +204,10 @@ describe("HistoryController", () => {
                     done();
                 });
 
-                // Request for an entry that should not exist
+                // Request for "pageSize" results
                 controller.getMethod({
-                    body: {
-                        userID: userID,
+                    userID: userID,
+                    query: {
                         beforeTimestamp: new Date(),
                         pageSize: pageSize
                     }

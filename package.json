@@ -1,5 +1,5 @@
 {
-    "name": "backend",
+    "name": "coffaine-sales",
     "version": "1.0.0",
     "description": "Backend for sales microservice",
     "scripts": {
@@ -13,14 +13,14 @@
     "dependencies": {
         "dotenv": "^8.2.0",
         "express": "^4.17.1",
+        "express-swagger-generator": "^1.1.17",
         "mongoose": "^5.11.1"
     },
     "devDependencies": {
         "@types/express": "^4.17.9",
         "@types/jest": "^26.0.18",
-        "express-swagger-generator": "^1.1.17",
-        "jest": "^26.6.3",
-        "supertest": "^6.0.1"
+        "axios": "^0.21.0",
+        "jest": "^26.6.3"
     },
     "jest": {
         "globalSetup": "./test/setup.js",

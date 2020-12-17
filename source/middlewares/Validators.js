@@ -7,7 +7,7 @@ class Validators {
 
     static Required(fieldName) {
         return (req, res, next) => {
-            if(req.body.hasOwnProperty(fieldName)) {
+            if(req.body && req.body.hasOwnProperty(fieldName) || req.query && req.query.hasOwnProperty(fieldName)) {
                 next();
             } else {
                 res.status(400).json({ reason: "Missing fields" });
@@ -17,7 +17,8 @@ class Validators {
 
     static Range(fieldName, minValue, maxValue) {
         return (req, res, next) => {
-            if(req.body[fieldName] >= minValue && req.body[fieldName] <= maxValue) {
+            const field = req.body[fieldName] || req.query[fieldName];
+            if(field >= minValue && field <= maxValue) {
                 next();
             } else {
                 res.status(400).json({ reason: "Exceeded boundaries" });
@@ -28,10 +29,13 @@ class Validators {
     static ToDate(fieldName) {
         return (req, res, next) => {
             
-            const date = new Date(req.body[fieldName]);
+            const date = new Date(req.body[fieldName] || req.query[fieldName]);
             if(date instanceof Date && !isNaN(date.valueOf())) {
-                date.getUTC
-                req.body[fieldName] = date;
+                if(req.body[fieldName]) {
+                    req.body[fieldName] = date;
+                } else {
+                    req.query[fieldName] = date;
+                }
                 next();
             } else {
                 res.status(400).json({ reason: "Date parsing failed" });

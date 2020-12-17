@@ -29,9 +29,9 @@ class HistoryController {
      * Get a purchase history entry
      * @route GET /history
      * @group history - Purchases history per user
-     * @param {string}  userToken.body.required         - User JWT token
-     * @param {string}  beforeTimestamp.body.required   - Search before this timestamp happens
-     * @param {integer} pageSize.body.required          - Page size
+     * @param {string}  userToken.query.required         - User JWT token
+     * @param {string}  beforeTimestamp.query.required   - Search before this timestamp happens
+     * @param {integer} pageSize.query.required          - Page size
      * @returns {Array.<HistoryEntry>}  200 - Returns the requested entries
      * @returns {ValidationError}       400 - Supplied parameters are invalid
      * @returns {UserAuthError}         401 - User is not authorized to perform this operation
@@ -39,11 +39,11 @@ class HistoryController {
      */
     getMethod(req, res) {
         HistoryEntry.find({
-            userID: req.body.userID,
-            timestamp: { $lte: req.body.beforeTimestamp }
+            userID: req.userID,
+            timestamp: { $lte: req.query.beforeTimestamp }
         })
         .select("timestamp operationType products")
-        .limit(req.body.pageSize)
+        .limit(parseInt(req.query.pageSize))
         .sort("-timestamp")
         .lean()
         .exec((err, entries) => {
@@ -66,9 +66,10 @@ class HistoryController {
     }
 
     constructor(apiPrefix, router) {
+        const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
         const beforeTimestampValidators = [Validators.Required("beforeTimestamp"), Validators.ToDate("beforeTimestamp")];
         const pageSizeValidators = [Validators.Required("pageSize"), Validators.Range("pageSize", 1, 20)];
-        router.get(apiPrefix + "/history", AuthorizeJWT, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
+        router.get(apiPrefix + "/history", ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
     }
 }
 
