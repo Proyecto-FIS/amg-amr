@@ -1,4 +1,5 @@
 const axios = require("axios");
+const mongoose = require("mongoose");
 
 /**
  * @typedef UserAuthError
@@ -6,10 +7,11 @@ const axios = require("axios");
  */
 
 const AuthorizeJWT = (req, res, next) => {
-    const token = req.body.userToken;
+    const token = req.body.userToken || req.query.userToken;
+
     axios.get(`${process.env.USERS_MS}/auth/${token}`)
     .then(response => {
-        req.body.userID = response.data.account_id;
+        req.userID = mongoose.Types.ObjectId(response.data.account_id);
         next();
     })
     .catch(err => {

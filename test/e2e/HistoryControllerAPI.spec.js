@@ -23,48 +23,52 @@ describe("HistoryController API", () => {
             userID = response.data.account_id;
             server.run(done);
         })
-        .catch(err => done.fail("Test user not logged in: " + err));
+        .catch(err => done.fail("Test user has not logged in: " + err));
     });
 
     afterAll(done => server.stop(done));
     beforeEach(done => mongoose.connection.dropCollection("historyentries", err => done()));
 
-    test("Wrong user", (done) => {
-        axios.get(testURL, {
-            userToken: "Wrongtoken123",
-            beforeTimestamp: new Date(),
-            pageSize: 10
+    test("Wrong user", () => {
+        return axios.get(testURL, {
+            params: {
+                userToken: "Wrongtoken123",
+                beforeTimestamp: new Date(),
+                pageSize: 10
+            }
         })
-        .then(response => fail())
+        .then(response => fail(`Unexpected success: ${response}`))
         .catch(err => {
             expect(err.response.status).toBe(401);
             expect(err.response.data.reason).toBe("Authentication failed");
-            done();
         });
     });
 
-    test("Missing fields", (done) => {
-        axios.get(testURL, {
-            userToken
+    test("Missing fields", () => {
+        return axios.get(testURL, {
+            params: {
+                userToken
+            }
         })
-        .then(response => fail())
+        .then(response => fail(`Unexpected success: ${response}`))
         .catch(err => {
             expect(err.response.status).toBe(400);
             expect(err.response.data.reason).toBe("Missing fields");
             return axios.get(testURL, {
-                userToken,
-                beforeTimestamp: new Date()
+                params: {
+                    userToken,
+                    beforeTimestamp: new Date()
+                }
             });
         })
-        .then(response => fail())
+        .then(response => fail(`Unexpected success: ${response}`))
         .catch(err => {
             expect(err.response.status).toBe(400);
             expect(err.response.data.reason).toBe("Missing fields");
-            done();
-        })
+        });
     });
 
-    test("Correct user and has entries", (done) => {
+    test("Correct user and has entries", () => {
 
         const testEntry = {
             userID,
@@ -79,22 +83,28 @@ describe("HistoryController API", () => {
             ]
         };
 
-        new HistoryEntry(testEntry)
+        return new HistoryEntry(testEntry)
         .save()
         .then(() => {
             return axios.get(testURL, {
-                userToken,
-                beforeTimestamp: new Date(),
-                pageSize: 10
+                params: {
+                    userToken,
+                    beforeTimestamp: new Date(),
+                    pageSize: 10
+                }
             });
         })
         .then(response => {
+
+            // Serialize expected data to string to compare with the response
+            testEntry.products[0]._id = testEntry.products[0]._id.toHexString();
+            testEntry.timestamp = testEntry.timestamp.toISOString();
+
             expect(response.status).toBe(200);
-            expect(response.data.timestamp).toBe(testEntry.timestamp);
-            expect(response.data.operationType).toBe(testEntry.operationType);
-            expect(response.data.products).toMatchObject(testEntry.products);
-            done();
-        })
-        .catch(err => fail());
+            expect(response.data.length).toBe(1);
+            expect(response.data[0].timestamp).toBe(testEntry.timestamp);
+            expect(response.data[0].operationType).toBe(testEntry.operationType);
+            expect(response.data[0].products).toMatchObject(testEntry.products);
+        });
     });
 });

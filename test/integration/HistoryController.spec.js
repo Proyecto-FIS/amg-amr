@@ -84,8 +84,8 @@ describe("HistoryController", () => {
 
                 // Get the created entry
                 controller.getMethod({
-                    body: {
-                        userID: userID,
+                    userID: userID,
+                    query: {
                         beforeTimestamp: new Date(),
                         pageSize: 5
                     }
@@ -106,8 +106,8 @@ describe("HistoryController", () => {
         });
 
         controller.getMethod({
-            body: {
-                userID: mongoose.Types.ObjectId(),
+            userID: mongoose.Types.ObjectId(),
+            query: {
                 beforeTimestamp: new Date(),
                 pageSize: 10
             }
@@ -132,8 +132,8 @@ describe("HistoryController", () => {
 
                 // Request for an entry that should not exist
                 controller.getMethod({
-                    body: {
-                        userID: mongoose.Types.ObjectId(preloadEntries + 1),
+                    userID: mongoose.Types.ObjectId(preloadEntries + 1),
+                    query: {
                         beforeTimestamp: new Date(),
                         pageSize: 10
                     }
@@ -174,8 +174,8 @@ describe("HistoryController", () => {
 
                 // Get the history entries
                 controller.getMethod({
-                    body: {
-                        userID: preload[0].userID,
+                    userID: preload[0].userID,
+                    query: {
                         beforeTimestamp: thresholdDate,
                         pageSize: 10
                     }
@@ -206,8 +206,8 @@ describe("HistoryController", () => {
 
                 // Request for "pageSize" results
                 controller.getMethod({
-                    body: {
-                        userID: userID,
+                    userID: userID,
+                    query: {
                         beforeTimestamp: new Date(),
                         pageSize: pageSize
                     }

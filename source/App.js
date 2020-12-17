@@ -12,6 +12,7 @@ class App {
         this.port = process.env.PORT || 8080;
         this.db = new DatabaseConnection();
 
+        this.app.use(express.urlencoded({ extended: false }));
         this.app.use(express.json());
         this.app.use(this.router);
 
