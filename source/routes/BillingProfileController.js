@@ -76,7 +76,7 @@ class BillingProfileController {
 
 /**
  * @typedef BillingProfileError
- * @property {string} todo.required - TODO
+ * @property {string} reason.required - Textual representation of the error
  */
 
 module.exports = BillingProfileController;

@@ -3,8 +3,17 @@ const Schema = mongoose.Schema;
 
 const ProductSchema = new Schema({
     _id: Schema.ObjectId,
-    quantity: Number,
-    unitPriceEuros: Number
+    quantity: {
+        type: Number,
+        min: 1,
+        validate: {
+            validator: Number.isInteger
+        }
+    },
+    unitPriceEuros: {
+        type: Number,
+        min: 0
+    }
 });
 
 const HistoryEntrySchema = new Schema({
@@ -13,8 +22,14 @@ const HistoryEntrySchema = new Schema({
         type: Date,
         default: Date.now
     },
-    operationType: String,       // "payment" or "subscription"
-    products: [ProductSchema],
+    operationType: {
+        type: String,
+        enum: ["payment", "subscription"]
+    },
+    products: {
+        type: [ProductSchema],
+        required: true
+    }
 });
 
 module.exports = mongoose.model("HistoryEntry", HistoryEntrySchema);

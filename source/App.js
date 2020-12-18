@@ -22,7 +22,7 @@ class App {
         this.billingProfileController = new BillingProfileController(apiPrefix, this.router);
         this.historyController = new HistoryController(apiPrefix, this.router);
         require("./routes/payment").register(apiPrefix, this.router);
-        require("./routes/return").register(apiPrefix, this.router);
+        require("./routes/refund").register(apiPrefix, this.router);
         require("./routes/subscription").register(apiPrefix, this.router);
 
         this.app.use(App.errorHandler);
