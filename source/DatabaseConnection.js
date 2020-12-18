@@ -37,4 +37,9 @@ class DatabaseConnection {
     }
 }
 
+/**
+ * @typedef DatabaseError
+ * @property {string} reason.required - Textual representation of the error
+ */
+
 module.exports = DatabaseConnection;

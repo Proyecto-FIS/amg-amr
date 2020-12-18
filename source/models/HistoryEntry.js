@@ -6,13 +6,15 @@ const ProductSchema = new Schema({
     quantity: {
         type: Number,
         min: 1,
+        required: true,
         validate: {
             validator: Number.isInteger
         }
     },
     unitPriceEuros: {
         type: Number,
-        min: 0
+        min: 0,
+        required: true
     }
 });
 
@@ -24,7 +26,8 @@ const HistoryEntrySchema = new Schema({
     },
     operationType: {
         type: String,
-        enum: ["payment", "subscription"]
+        enum: ["payment", "subscription"],
+        required: true
     },
     products: {
         type: [ProductSchema],

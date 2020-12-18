@@ -14,7 +14,7 @@ class HistoryController {
      * @returns {Array.<HistoryEntry>}  200 - Returns the requested entries
      * @returns {ValidationError}       400 - Supplied parameters are invalid
      * @returns {UserAuthError}         401 - User is not authorized to perform this operation
-     * @returns {HistoryError}          500 - Database error
+     * @returns {DatabaseError}         500 - Database error
      */
     getMethod(req, res) {
         HistoryEntry.find({
@@ -65,11 +65,6 @@ class HistoryController {
  * @property {string} timestamp         - Date & time when the operation ocurred
  * @property {string} operationType     - "payment" or "subscription"
  * @property {Array.<Product>} products - Products which have been bought
- */
-
-/**
- * @typedef HistoryError
- * @property {string} reason.required - Brief description of the error
  */
 
 module.exports = HistoryController;

@@ -5,13 +5,14 @@ const Validators = require("../middlewares/Validators");
 class BillingProfileController {
 
     /**
-     * Get a billing profile for a specific user
+     * Get the billing profiles for a specific user
      * @route GET /billing-profile
      * @group Billing profile - Billing profiles per user
-     * @param {string}  userToken.body.required  - TODO
-     * @param {integer} profileID.body.required - Billing profile identifier
-     * @returns {BillingProfile} 200 - Returns the requested billing profile for this user
-     * @returns {BillingProfileError} default - unexpected error
+     * @param {string}  userToken.query.required  - User JWT token
+     * @returns {Array.<BillingProfile>}    200 - Returns the billing profiles for this user
+     * @returns {ValidationError}           400 - Supplied parameters are invalid
+     * @returns {UserAuthError}             401 - User is not authorized to perform this operation
+     * @returns {DatabaseError}             500 - Database error
      */
     getMethod(req, res) {
         res.send("Test");
@@ -21,10 +22,12 @@ class BillingProfileController {
      * Create a new billing profile for a certain user
      * @route POST /billing-profile
      * @group Billing profile - Billing profiles per user
-     * @param {string}  userToken.body.required  - TODO
-     * @param {BillingProfile.model} profile.body.required - New billing profile
-     * @returns {integer} 200 - Returns the billing profile identifier
-     * @returns {BillingProfileError} default - unexpected error
+     * @param {string}  userToken.query.required            - User JWT token
+     * @param {BillingProfile.model} profile.body.required  - New billing profile
+     * @returns {string}                200 - Returns the billing profile identifier
+     * @returns {ValidationError}       400 - Supplied parameters are invalid
+     * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+     * @returns {DatabaseError}         500 - Database error
      */
     postMethod(req, res) {
         res.send("Coffaine - Sales microservice");
@@ -34,10 +37,12 @@ class BillingProfileController {
      * Update an existing billing profile for a certain user
      * @route PUT /billing-profile
      * @group Billing profile - Billing profiles per user
-     * @param {string}  userToken.body.required  - TODO
-     * @param {BillingProfile.model} profile.body.required - New value for the billing profile
-     * @returns {BillingProfile} 200 - Returns the current state for this billing profile
-     * @returns {BillingProfileError} default - unexpected error
+     * @param {string}  userToken.query.required            - User JWT token
+     * @param {BillingProfile.model} profile.body.required  - New value for the billing profile
+     * @returns {BillingProfile}        200 - Returns the current state for this billing profile
+     * @returns {ValidationError}       400 - Supplied parameters are invalid
+     * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+     * @returns {DatabaseError}         500 - Database error
      */
     putMethod(req, res) {
         res.send("Test");
@@ -47,36 +52,40 @@ class BillingProfileController {
      * Deletes an existing billing profile for a certain user
      * @route DELETE /billing-profile
      * @group Billing profile - Billing profiles per user
-     * @param {string}  userToken.body.required  - TODO
-     * @param {integer} profileID.body.required - Billing profile identifier
-     * @returns {BillingProfile} 200 - Returns the current state for this billing profile
-     * @returns {BillingProfileError} default - unexpected error
+     * @param {string} userToken.query.required     - User JWT token
+     * @param {string} profileID.query.required     - Billing profile identifier
+     * @returns {BillingProfile}        200 - Returns the deleted billing profile, or empty if it didn't exist
+     * @returns {ValidationError}       400 - Supplied parameters are invalid
+     * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+     * @returns {DatabaseError}         500 - Database error
      */
     deleteMethod(req, res) {
         res.send("Test");
     }
 
     constructor(apiPrefix, router) {
-        const route = apiPrefix + "/billing-profile";
-        router.get(route, this.getMethod.bind(this));
-        router.post(route, this.postMethod.bind(this));
-        router.put(route, this.putMethod.bind(this));
-        router.delete(route, this.deleteMethod.bind(this));
+        const route = `${apiPrefix}/billing-profile`;
+        const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
+
+        router.get(route, ...userTokenValidators, this.getMethod.bind(this));
+        router.post(route, ...userTokenValidators, this.postMethod.bind(this));
+        router.put(route, ...userTokenValidators, this.putMethod.bind(this));
+        router.delete(route, ...userTokenValidators, this.deleteMethod.bind(this));
     }
 }
 
 /**
  * @typedef BillingProfile
- * @property {integer} id       - Identifier
- * @property {string} address   - Address
- * @property {string} city      - City
- * @property {string} country   - Country
- * @property {integer} zipCode  - Zip code
- */
-
-/**
- * @typedef BillingProfileError
- * @property {string} reason.required - Textual representation of the error
+ * @property {string} _id                   - Unique identifier (not recommended in POST method due to id collision)
+ * @property {string} name.required         - Receiver name
+ * @property {string} surname.required      - Receiver surname
+ * @property {string} address.required      - Address
+ * @property {string} city.required         - City
+ * @property {string} province.required     - Province or state
+ * @property {string} country.required      - Country
+ * @property {integer} zipCode.required     - Zip code
+ * @property {integer} phoneNumber.required - Phone number
+ * @property {string} email.required        - Receiver email
  */
 
 module.exports = BillingProfileController;
