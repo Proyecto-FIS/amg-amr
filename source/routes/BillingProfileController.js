@@ -15,7 +15,19 @@ class BillingProfileController {
      * @returns {DatabaseError}             500 - Database error
      */
     getMethod(req, res) {
-        res.send("Test");
+        BillingProfile.find({
+            userID: req.userID
+        })
+        .select("-userID")
+        .sort("-name")
+        .lean()
+        .exec((err, entries) => {
+            if(err) {
+                res.status(500).json({ reason: "Database error" });
+            } else {
+                res.status(200).json(entries);
+            }
+        });
     }
 
     /**
@@ -30,7 +42,12 @@ class BillingProfileController {
      * @returns {DatabaseError}         500 - Database error
      */
     postMethod(req, res) {
-        res.send("Coffaine - Sales microservice");
+        delete req.body.profile._id;        // Ignore _id to prevent key duplication
+        req.body.profile.userID = req.userID;
+        new BillingProfile(req.body.profile)
+        .save()
+        .then(doc => res.status(200).send(doc._id))
+        .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 
     /**
@@ -45,7 +62,10 @@ class BillingProfileController {
      * @returns {DatabaseError}         500 - Database error
      */
     putMethod(req, res) {
-        res.send("Test");
+        req.body.profile.userID = req.userID;
+        BillingProfile.findByIdAndUpdate(req.body.profile._id, req.body.profile)
+        .then(doc => res.status(200).json(doc.toJSON()))
+        .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 
     /**
@@ -60,7 +80,9 @@ class BillingProfileController {
      * @returns {DatabaseError}         500 - Database error
      */
     deleteMethod(req, res) {
-        res.send("Test");
+        BillingProfile.findByIdAndDelete(req.query.profileID)
+        .then(doc => res.status(200).json(doc.toJSON()))
+        .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 
     constructor(apiPrefix, router) {
@@ -68,9 +90,9 @@ class BillingProfileController {
         const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
 
         router.get(route, ...userTokenValidators, this.getMethod.bind(this));
-        router.post(route, ...userTokenValidators, this.postMethod.bind(this));
-        router.put(route, ...userTokenValidators, this.putMethod.bind(this));
-        router.delete(route, ...userTokenValidators, this.deleteMethod.bind(this));
+        router.post(route, ...userTokenValidators, Validators.Required("profile"), this.postMethod.bind(this));
+        router.put(route, ...userTokenValidators, Validators.Required("profile"), this.putMethod.bind(this));
+        router.delete(route, ...userTokenValidators, Validators.Required("profileID"), this.deleteMethod.bind(this));
     }
 }
 
