@@ -49,16 +49,12 @@ const BillingProfileSchema = new Schema({
     phoneNumber: {
         type: Number,
         required: true,
-        validate: {
-            validator: /^([0-9]{15}$)/.test
-        }
+        validate: /^([0-9]{1,15}$)/
     },
     email: {
         type: String,
         required: true,
-        validate: {
-            validator: /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/.test
-        },
+        validate: /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/
     }
 });
 

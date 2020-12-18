@@ -27,7 +27,7 @@ class DatabaseConnection {
         });
     
         // Create DB connection
-        mongoose.connect(process.env.DBSTRING, { useNewUrlParser: true, useUnifiedTopology: true });
+        mongoose.connect(process.env.DBSTRING, { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false });
     }
 
     close(done) {

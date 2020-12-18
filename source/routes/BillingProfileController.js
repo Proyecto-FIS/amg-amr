@@ -62,9 +62,9 @@ class BillingProfileController {
      * @returns {DatabaseError}         500 - Database error
      */
     putMethod(req, res) {
-        req.body.profile.userID = req.userID;
-        BillingProfile.findByIdAndUpdate(req.body.profile._id, req.body.profile)
-        .then(doc => res.status(200).json(doc.toJSON()))
+        BillingProfile.findOneAndUpdate({ _id: req.body.profile._id, userID: req.userID }, req.body.profile)
+        .then(doc => BillingProfile.findById(doc._id))
+        .then(doc => res.status(200).json(doc))
         .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 
@@ -80,8 +80,8 @@ class BillingProfileController {
      * @returns {DatabaseError}         500 - Database error
      */
     deleteMethod(req, res) {
-        BillingProfile.findByIdAndDelete(req.query.profileID)
-        .then(doc => res.status(200).json(doc.toJSON()))
+        BillingProfile.findOneAndDelete({ _id: req.query.profileID, userID: req.userID })
+        .then(doc => res.status(200).json(doc))
         .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 

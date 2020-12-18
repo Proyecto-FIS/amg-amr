@@ -79,6 +79,7 @@ describe("HistoryController", () => {
                     expect(data[0].timestamp).toStrictEqual(expectedResult.timestamp);
                     expect(data[0].operationType).toBe(expectedResult.operationType);
                     expect(data[0].products).toMatchObject(expectedResult.products);
+                    expect(data[0].userID).toBeUndefined();
                     done();
                 });
 
