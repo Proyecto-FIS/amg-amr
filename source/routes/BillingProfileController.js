@@ -76,7 +76,7 @@ class BillingProfileController {
 
 /**
  * @typedef BillingProfile
- * @property {string} _id                   - Unique identifier (not recommended in POST method due to id collision)
+ * @property {string} _id                   - Unique identifier (ignored in POST requests due to id collision)
  * @property {string} name.required         - Receiver name
  * @property {string} surname.required      - Receiver surname
  * @property {string} address.required      - Address
