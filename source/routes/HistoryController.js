@@ -1,27 +1,6 @@
-const express = require("express");
 const AuthorizeJWT = require("../middlewares/AuthorizeJWT");
 const HistoryEntry = require("../models/HistoryEntry");
 const Validators = require("../middlewares/Validators");
-
-/**
- * @typedef Product
- * @property {string} _id               - Product identifier
- * @property {number} quantity          - Number of products of this type
- * @property {number} unitPriceEuros    - Price per unit, in euros
- */
-
-/**
- * @typedef HistoryEntry
- * @property {string} _id               - Unique identifier for this entry
- * @property {string} timestamp         - Date & time when the operation ocurred
- * @property {string} operationType     - "payment" or "subscription"
- * @property {Array.<Product>} products - Products which have been bought
- */
-
-/**
- * @typedef HistoryError
- * @property {string} reason.required - Brief description of the error
- */
 
 class HistoryController {
 
@@ -72,5 +51,25 @@ class HistoryController {
         router.get(apiPrefix + "/history", ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
     }
 }
+
+/**
+ * @typedef Product
+ * @property {string} _id               - Product identifier
+ * @property {number} quantity          - Number of products of this type
+ * @property {number} unitPriceEuros    - Price per unit, in euros
+ */
+
+/**
+ * @typedef HistoryEntry
+ * @property {string} _id               - Unique identifier for this entry
+ * @property {string} timestamp         - Date & time when the operation ocurred
+ * @property {string} operationType     - "payment" or "subscription"
+ * @property {Array.<Product>} products - Products which have been bought
+ */
+
+/**
+ * @typedef HistoryError
+ * @property {string} reason.required - Brief description of the error
+ */
 
 module.exports = HistoryController;
