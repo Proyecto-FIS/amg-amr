@@ -16,7 +16,7 @@ class BillingProfileController {
      */
     getMethod(req, res) {
         BillingProfile.find({
-            userID: req.userID
+            userID: req.query.userID
         })
         .select("-userID")
         .sort("-name")
@@ -43,7 +43,7 @@ class BillingProfileController {
      */
     postMethod(req, res) {
         delete req.body.profile._id;        // Ignore _id to prevent key duplication
-        req.body.profile.userID = req.userID;
+        req.body.profile.userID = req.query.userID;
         new BillingProfile(req.body.profile)
         .save()
         .then(doc => res.status(200).send(doc._id))
@@ -62,8 +62,14 @@ class BillingProfileController {
      * @returns {DatabaseError}         500 - Database error
      */
     putMethod(req, res) {
-        BillingProfile.findOneAndUpdate({ _id: req.body.profile._id, userID: req.userID }, req.body.profile)
-        .then(doc => BillingProfile.findById(doc._id))
+        BillingProfile.findOneAndUpdate({ _id: req.body.profile._id, userID: req.query.userID }, req.body.profile)
+        .then(doc => {
+            if(doc) {
+                return BillingProfile.findById(doc._id);
+            } else {
+                res.sendStatus(401);
+            }
+        })
         .then(doc => res.status(200).json(doc))
         .catch(err => res.status(500).json({ reason: "Database error" }));
     }
@@ -80,8 +86,8 @@ class BillingProfileController {
      * @returns {DatabaseError}         500 - Database error
      */
     deleteMethod(req, res) {
-        BillingProfile.findOneAndDelete({ _id: req.query.profileID, userID: req.userID })
-        .then(doc => res.status(200).json(doc))
+        BillingProfile.findOneAndDelete({ _id: req.query.profileID, userID: req.query.userID })
+        .then(doc => doc ? res.status(200).json(doc) : res.sendStatus(401))
         .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 

@@ -18,7 +18,7 @@ class HistoryController {
      */
     getMethod(req, res) {
         HistoryEntry.find({
-            userID: req.userID,
+            userID: req.query.userID,
             timestamp: { $lte: req.query.beforeTimestamp }
         })
         .select("timestamp operationType products")
@@ -32,7 +32,7 @@ class HistoryController {
                 res.status(200).json(entries);
             }
         });
-    }
+    };
 
     createEntry(entry) {
         const historyEntry = new HistoryEntry(entry);
