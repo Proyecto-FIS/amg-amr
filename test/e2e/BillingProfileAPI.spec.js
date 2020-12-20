@@ -120,15 +120,14 @@ describe("BillingProfile API", () => {
             })
             .then(response => {
                 sampleProfile.zipCode = updatedZip;
-                expect(response.body.length).toBe(1);
-                expect(response.body[0]).toMatchObject(sampleProfile);
+                expect(response.body).toMatchObject(sampleProfile);
                 return makeRequest()
                     .get(testURL)
                     .query({ userToken })
                     .expect(200);
             })
             .then(response => {
-                expect(response.body[0].length).toBe(1);
+                expect(response.body.length).toBe(1);
                 expect(response.body[0]).toMatchObject(sampleProfile);
                 return makeRequest()
                     .delete(testURL)
@@ -136,8 +135,7 @@ describe("BillingProfile API", () => {
                     .expect(200);
             })
             .then(response => {
-                expect(response.body[0].length).toBe(1);
-                expect(response.body[0]).toMatchObject(sampleProfile);
+                expect(response.body).toMatchObject(sampleProfile);
                 return makeRequest()
                     .get(testURL)
                     .query({ userToken })
