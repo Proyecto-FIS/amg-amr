@@ -1,54 +1,52 @@
 const DatabaseConnection = require("../../source/DatabaseConnection");
 const HistoryController = require("../../source/routes/HistoryController");
 const mongoose = require("mongoose");
+const utils = require("../utils");
+const request = require("supertest");
 
 describe("HistoryController", () => {
 
+    const testURL = "/history";
     const db = new DatabaseConnection();
-    let controller;
-    let mockedRes;
+    let app, controller;
+
+    // Preload data
     let preload;
     const preloadEntries = 5;
     const sampleProduct = {
-        _id: mongoose.Types.ObjectId(1),
+        _id: mongoose.Types.ObjectId(1).toHexString(),
         quantity: 5,
         unitPriceEuros: 20
     };
 
-    beforeAll((done) => {
+    beforeAll(() => {
 
-        // Create controller with mocked router
-        const mockedRouter = {
-            get: (path, ...middlewares) => { }
-        };
+        // Create controller
+        controller = new HistoryController(testURL, utils.mockedRouter());
+        app = utils.createExpressApp(controller, testURL);
 
-        controller = new HistoryController("test", mockedRouter);
-        
         // Create database preload for some tests
         preload = [];
         for (let i = 0; i < preloadEntries; i++) {
             preload.push({
-                userID: mongoose.Types.ObjectId(i),
-                timestamp: new Date(),
+                userID: mongoose.Types.ObjectId(i).toHexString(),
+                timestamp: new Date().toISOString(),
                 operationType: "payment",
                 products: [sampleProduct]
             });
         }
 
-        db.setup(done);
+        return db.setup();
     });
 
-    beforeEach((done) => {
-        mockedRes = {};
-        mongoose.connection.dropCollection("historyentries", err => done());
-    });
+    beforeEach(done => mongoose.connection.dropCollection("historyentries", err => done()));
 
-    afterAll(done => db.close(done));
+    afterAll(() => db.close());
 
-    test("Write & read single entry", (done) => {
+    test("Write & read single entry", () => {
 
-        const userID = mongoose.Types.ObjectId(1);
-        const now = new Date();
+        const userID = mongoose.Types.ObjectId(1).toHexString();
+        const now = new Date().toISOString();
 
         // Expected result from GET request
         const expectedResult = {
@@ -66,87 +64,62 @@ describe("HistoryController", () => {
         };
 
         // Create a new history entry
-        controller.createEntry(testEntry)
+        return controller.createEntry(testEntry)
             .then(() => {
-
-                // Create a mock for response object
-                mockedRes.status = jest.fn().mockImplementation((code) => {
-                    expect(code).toBe(200);
-                    return mockedRes;
-                });
-                mockedRes.json = jest.fn().mockImplementation((data) => {
-                    expect(data.length).toBe(1);
-                    expect(data[0].timestamp).toStrictEqual(expectedResult.timestamp);
-                    expect(data[0].operationType).toBe(expectedResult.operationType);
-                    expect(data[0].products).toMatchObject(expectedResult.products);
-                    done();
-                });
-
-                // Get the created entry
-                controller.getMethod({
-                    userID: userID,
-                    query: {
+                return request(app)
+                    .get(testURL)
+                    .query({
+                        userID: userID,
                         beforeTimestamp: new Date(),
                         pageSize: 5
-                    }
-                }, mockedRes);
-            });
+                    })
+                    .expect(200);
+            })
+            .then(response => {
+                const data = response.body;
+
+                expect(data.length).toBe(1);
+                expect(data[0].timestamp).toStrictEqual(expectedResult.timestamp);
+                expect(data[0].operationType).toBe(expectedResult.operationType);
+                expect(data[0].products).toMatchObject(expectedResult.products);
+                expect(data[0].userID).toBeUndefined();
+            })
     });
 
-    test("Should return empty set", (done) => {
+    test("Should return empty set", () => {
 
-        // Create a mock for response object
-        mockedRes.status = jest.fn().mockImplementation((code) => {
-            expect(code).toBe(200);
-            return mockedRes;
-        });
-        mockedRes.json = jest.fn().mockImplementation((data) => {
-            expect(data.length).toBe(0);
-            done();
-        });
-
-        controller.getMethod({
-            userID: mongoose.Types.ObjectId(),
-            query: {
+        return request(app)
+            .get(testURL)
+            .query({
+                userID: mongoose.Types.ObjectId().toHexString(),
                 beforeTimestamp: new Date(),
                 pageSize: 10
-            }
-        }, mockedRes);
+            })
+            .expect(200, []);
     });
 
-    test("Missing user", (done) => {
+    test("Missing user", () => {
 
         // Preload database
-        controller.createEntries(preload)
+        return controller.createEntries(preload)
             .then(() => {
-
-                // Create a mock for response object
-                mockedRes.status = jest.fn().mockImplementation((code) => {
-                    expect(code).toBe(200);
-                    return mockedRes;
-                });
-                mockedRes.json = jest.fn().mockImplementation((data) => {
-                    expect(data.length).toBe(0);
-                    done();
-                });
-
-                // Request for an entry that should not exist
-                controller.getMethod({
-                    userID: mongoose.Types.ObjectId(preloadEntries + 1),
-                    query: {
+                return request(app)
+                    .get(testURL)
+                    .query({
+                        userID: mongoose.Types.ObjectId(preloadEntries + 1).toHexString(),
                         beforeTimestamp: new Date(),
                         pageSize: 10
-                    }
-                }, mockedRes);
+                    })
+                    .expect(200, []);
             });
     });
 
-    test("Multiple entries & selection by date and user", (done) => {
+    test("Multiple entries & selection by date and user", () => {
         
-        let thresholdDate = Date.now();
+        const thresholdDate = Date.now();
 
         // Preload database
-        controller.createEntries(preload)
+        return controller.createEntries(preload)
             .then(() => {
 
                 // Additional entry for user with entries
@@ -158,60 +131,46 @@ describe("HistoryController", () => {
                 })
             })
             .then(() => {
-
-                // Create a mock for response object
-                mockedRes.status = jest.fn().mockImplementation((code) => {
-                    expect(code).toBe(200);
-                    return mockedRes;
-                });
-                mockedRes.json = jest.fn().mockImplementation((data) => {
-                    expect(data.length).toBe(1);    // Should return the entry before thresholdDate
-                    expect(data[0].timestamp).toStrictEqual(preload[0].timestamp);
-                    expect(data[0].operationType).toBe(preload[0].operationType);
-                    expect(data[0].products).toMatchObject(preload[0].products);
-                    done();
-                });
-
-                // Get the history entries
-                controller.getMethod({
-                    userID: preload[0].userID,
-                    query: {
+                return request(app)
+                    .get(testURL)
+                    .query({
+                        userID: preload[0].userID,
                         beforeTimestamp: thresholdDate,
                         pageSize: 10
-                    }
-                }, mockedRes);
+                    })
+                    .expect(200);
+            })
+            .then(response => {
+                const data = response.body;
+                expect(data.length).toBe(1);    // Should return the entry before thresholdDate
+                expect(data[0].timestamp).toStrictEqual(preload[0].timestamp);
+                expect(data[0].operationType).toBe(preload[0].operationType);
+                expect(data[0].products).toMatchObject(preload[0].products);
             });
     });
 
-    test("Page size limits", (done) => {
+    test("Page size limits", () => {
 
         let modPreload = preload;
-        const userID = mongoose.Types.ObjectId(100);
+        const userID = mongoose.Types.ObjectId(100).toHexString();
         const pageSize = 3;
         for(let i = 0; i < preloadEntries; i++) {
             modPreload[i].userID = userID;
         }
-        controller.createEntries(modPreload)
+
+        return controller.createEntries(modPreload)
             .then(() => {
-
-                // Create a mock for response object
-                mockedRes.status = jest.fn().mockImplementation((code) => {
-                    expect(code).toBe(200);
-                    return mockedRes;
-                });
-                mockedRes.json = jest.fn().mockImplementation((data) => {
-                    expect(data.length).toBe(pageSize);
-                    done();
-                });
-
-                // Request for "pageSize" results
-                controller.getMethod({
-                    userID: userID,
-                    query: {
+                return request(app)
+                    .get(testURL)
+                    .query({
+                        userID: userID,
                         beforeTimestamp: new Date(),
                         pageSize: pageSize
-                    }
-                }, mockedRes);
-            });
+                    })
+                    .expect(200);
+            })
+            .then(response => {
+                expect(response.body.length).toBe(pageSize);
+            })
     });
 });

@@ -1,3 +1,3 @@
 const App = require("./App");
 
-new App().run(() => { });
+new App().run();

@@ -2,6 +2,7 @@ const express = require("express");
 const swagger = require("./swagger");
 const DatabaseConnection = require("./DatabaseConnection");
 const HistoryController = require("./routes/HistoryController");
+const BillingProfileController = require("./routes/BillingProfileController");
 
 class App {
 
@@ -18,10 +19,10 @@ class App {
 
         // Route registration
         const apiPrefix = swagger.getBasePath();
-        require("./routes/billing-profile").register(apiPrefix, this.router);
+        this.billingProfileController = new BillingProfileController(apiPrefix, this.router);
         this.historyController = new HistoryController(apiPrefix, this.router);
         require("./routes/payment").register(apiPrefix, this.router);
-        require("./routes/return").register(apiPrefix, this.router);
+        require("./routes/refund").register(apiPrefix, this.router);
         require("./routes/subscription").register(apiPrefix, this.router);
 
         this.app.use(App.errorHandler);
@@ -33,25 +34,41 @@ class App {
         res.status(500).json({ msg: err });
     }
 
-    run(done) {
+    run() {
+        return new Promise((resolve, reject) => {
 
-        process.on("SIGINT", () => {
-            this.stop(() => console.log("[SERVER] Shut down requested by user"));
-        });
-
-        this.db.setup(() => {
-            this.server = this.app.listen(this.port, () => {
-                console.log(`[SERVER] Running at port ${this.port}`);
-                done();
+            process.on("SIGINT", () => {
+                this.stop().then(() => console.log("[SERVER] Shut down requested by user"));
             });
+
+            this.db.setup()
+                .then(() => {
+                    this.server = this.app.listen(this.port, () => {
+                        console.log(`[SERVER] Running at port ${this.port}`);
+                        resolve();
+                    });
+                })
+                .catch(reject);
         });
     }
 
-    stop(done) {
-        if(this.server == null) return;
-        this.server.close(() => {
-            this.db.close(done);
-        })
+    stop() {
+        return new Promise((resolve, reject) => {
+
+            if (this.server == null) {
+                reject();
+                return;
+            }
+
+            this.server.close(err => {
+                if(err) {
+                    reject(err);
+                } else {
+                    console.log("[SERVER] Closed successfully");
+                    this.db.close().then(resolve).catch(reject);
+                }
+            });
+        });
     }
 }
 

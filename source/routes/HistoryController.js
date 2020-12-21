@@ -1,27 +1,6 @@
-const express = require("express");
 const AuthorizeJWT = require("../middlewares/AuthorizeJWT");
 const HistoryEntry = require("../models/HistoryEntry");
 const Validators = require("../middlewares/Validators");
-
-/**
- * @typedef Product
- * @property {string} _id               - Product identifier
- * @property {number} quantity          - Number of products of this type
- * @property {number} unitPriceEuros    - Price per unit, in euros
- */
-
-/**
- * @typedef HistoryEntry
- * @property {string} _id               - Unique identifier for this entry
- * @property {string} timestamp         - Date & time when the operation ocurred
- * @property {string} operationType     - "payment" or "subscription"
- * @property {Array.<Product>} products - Products which have been bought
- */
-
-/**
- * @typedef HistoryError
- * @property {string} reason.required - Brief description of the error
- */
 
 class HistoryController {
 
@@ -35,11 +14,11 @@ class HistoryController {
      * @returns {Array.<HistoryEntry>}  200 - Returns the requested entries
      * @returns {ValidationError}       400 - Supplied parameters are invalid
      * @returns {UserAuthError}         401 - User is not authorized to perform this operation
-     * @returns {HistoryError}          500 - Database error
+     * @returns {DatabaseError}         500 - Database error
      */
     getMethod(req, res) {
         HistoryEntry.find({
-            userID: req.userID,
+            userID: req.query.userID,
             timestamp: { $lte: req.query.beforeTimestamp }
         })
         .select("timestamp operationType products")
@@ -53,7 +32,7 @@ class HistoryController {
                 res.status(200).json(entries);
             }
         });
-    }
+    };
 
     createEntry(entry) {
         const historyEntry = new HistoryEntry(entry);
@@ -72,5 +51,20 @@ class HistoryController {
         router.get(apiPrefix + "/history", ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
     }
 }
+
+/**
+ * @typedef Product
+ * @property {string} _id               - Product identifier
+ * @property {number} quantity          - Number of products of this type
+ * @property {number} unitPriceEuros    - Price per unit, in euros
+ */
+
+/**
+ * @typedef HistoryEntry
+ * @property {string} _id               - Unique identifier for this entry
+ * @property {string} timestamp         - Date & time when the operation ocurred
+ * @property {string} operationType     - "payment" or "subscription"
+ * @property {Array.<Product>} products - Products which have been bought
+ */
 
 module.exports = HistoryController;
