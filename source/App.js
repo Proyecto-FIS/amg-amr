@@ -3,6 +3,7 @@ const swagger = require("./swagger");
 const DatabaseConnection = require("./DatabaseConnection");
 const HistoryController = require("./routes/HistoryController");
 const BillingProfileController = require("./routes/BillingProfileController");
+const CircuitBreaker = require("./CircuitBreaker");
 
 class App {
 
@@ -25,6 +26,8 @@ class App {
         require("./routes/refund").register(apiPrefix, this.router);
         require("./routes/subscription").register(apiPrefix, this.router);
 
+        CircuitBreaker.initHystrixDashboard(this.app);
+
         this.app.use(App.errorHandler);
 
         swagger.setupSwagger(this.app, this.port);
@@ -38,7 +41,8 @@ class App {
         return new Promise((resolve, reject) => {
 
             process.on("SIGINT", () => {
-                this.stop().then(() => console.log("[SERVER] Shut down requested by user"));
+                console.log("[SERVER] Shut down requested by user");
+                this.stop().then(() => { });
             });
 
             this.db.setup()
