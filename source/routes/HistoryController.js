@@ -19,7 +19,7 @@ class HistoryController {
     getMethod(req, res) {
         HistoryEntry.find({
             userID: req.query.userID,
-            timestamp: { $lte: req.query.beforeTimestamp }
+            timestamp: { $lt: req.query.beforeTimestamp }
         })
         .select("timestamp operationType products")
         .limit(parseInt(req.query.pageSize))
