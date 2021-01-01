@@ -26,7 +26,7 @@ class App {
         require("./routes/refund").register(apiPrefix, this.router);
         require("./routes/subscription").register(apiPrefix, this.router);
 
-        CircuitBreaker.initHystrixStream(this.router);
+        CircuitBreaker.initHystrixDashboard(this.app);
 
         this.app.use(App.errorHandler);
 
