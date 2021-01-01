@@ -8,6 +8,7 @@ To run the backend, you must create these environment files in the backend/env f
 - test.env for the environment variables in testing environment
 
 Environment variables:
+- NODE_ENV: development, test or production
 - PORT: port to attach to the server. In production environment, this one is provided by Heroku
 - DBSTRING: database connection string. Example: mongodb://localhost:27017/coffaine-sales
 - HOSTNAME: only needed in production environment. It shouldn't be set in any other one
