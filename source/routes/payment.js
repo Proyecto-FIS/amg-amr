@@ -6,11 +6,6 @@ const express = require("express");
  */
 
 /**
- * @typedef Product
- * @property {string} todo - TODO
- */
-
-/**
  * @typedef PaymentError
  * @property {string} code.required
  */

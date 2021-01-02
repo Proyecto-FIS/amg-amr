@@ -34,8 +34,8 @@ class BillingProfileController {
      * Create a new billing profile for a certain user
      * @route POST /billing-profile
      * @group Billing profile - Billing profiles per user
-     * @param {string}  userToken.query.required            - User JWT token
-     * @param {BillingProfile.model} profile.body.required  - New billing profile
+     * @param {string}  userToken.query.required                - User JWT token
+     * @param {BillingProfilePost.model} profile.body.required  - New billing profile
      * @returns {string}                200 - Returns the billing profile identifier
      * @returns {ValidationError}       400 - Supplied parameters are invalid
      * @returns {UserAuthError}         401 - User is not authorized to perform this operation
@@ -54,8 +54,8 @@ class BillingProfileController {
      * Update an existing billing profile for a certain user
      * @route PUT /billing-profile
      * @group Billing profile - Billing profiles per user
-     * @param {string}  userToken.query.required            - User JWT token
-     * @param {BillingProfile.model} profile.body.required  - New value for the billing profile
+     * @param {string}  userToken.query.required                - User JWT token
+     * @param {BillingProfilePut.model} profile.body.required   - New value for the billing profile
      * @returns {BillingProfile}        200 - Returns the current state for this billing profile
      * @returns {ValidationError}       400 - Supplied parameters are invalid
      * @returns {UserAuthError}         401 - User is not authorized to perform this operation
@@ -80,7 +80,7 @@ class BillingProfileController {
      * @group Billing profile - Billing profiles per user
      * @param {string} userToken.query.required     - User JWT token
      * @param {string} profileID.query.required     - Billing profile identifier
-     * @returns {BillingProfile}        200 - Returns the deleted billing profile, or empty if it didn't exist
+     * @returns {BillingProfile}        200 - Returns the deleted billing profile
      * @returns {ValidationError}       400 - Supplied parameters are invalid
      * @returns {UserAuthError}         401 - User is not authorized to perform this operation
      * @returns {DatabaseError}         500 - Database error
@@ -101,6 +101,16 @@ class BillingProfileController {
         router.delete(route, ...userTokenValidators, Validators.Required("profileID"), this.deleteMethod.bind(this));
     }
 }
+
+/**
+ * @typedef BillingProfilePost
+ * @property {BillingProfile.model} profile - Billing profile to add
+ */
+
+/**
+ * @typedef BillingProfilePut
+ * @property {BillingProfile.model} profile - Billing profile to edit
+ */
 
 /**
  * @typedef BillingProfile

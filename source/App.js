@@ -1,5 +1,6 @@
 const express = require("express");
 const swagger = require("./swagger");
+const cors = require("cors");
 const DatabaseConnection = require("./DatabaseConnection");
 const HistoryController = require("./routes/HistoryController");
 const BillingProfileController = require("./routes/BillingProfileController");
@@ -14,6 +15,7 @@ class App {
         this.port = process.env.PORT || 8080;
         this.db = new DatabaseConnection();
 
+        this.app.use(cors());       // Needed for SwaggerUI TryIt
         this.app.use(express.urlencoded({ extended: false }));
         this.app.use(express.json());
         this.app.use(this.router);
