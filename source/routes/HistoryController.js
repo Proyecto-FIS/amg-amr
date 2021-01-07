@@ -34,6 +34,22 @@ class HistoryController {
         });
     };
 
+    /**
+     * Delete the purchase history for the logged user
+     * @route DELETE /history
+     * @group history - Purchases history per user
+     * @param {string}  userToken.query.required         - User JWT token
+     * @returns {}                      204 - Returns nothing
+     * @returns {ValidationError}       400 - Supplied parameters are invalid
+     * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+     * @returns {DatabaseError}         500 - Database error
+     */
+    deleteMethod(req, res) {
+        HistoryEntry.deleteMany({ userID: req.query.userID })
+            .then(() => res.sendStatus(204))
+            .catch(() => res.status(500).json({ reason: "Database error" }));
+    }
+
     createEntry(entry) {
         const historyEntry = new HistoryEntry(entry);
         return historyEntry.save();
@@ -45,10 +61,12 @@ class HistoryController {
     }
 
     constructor(apiPrefix, router) {
+        const apiUrl = apiPrefix + "/history";
         const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
         const beforeTimestampValidators = [Validators.Required("beforeTimestamp"), Validators.ToDate("beforeTimestamp")];
         const pageSizeValidators = [Validators.Required("pageSize"), Validators.Range("pageSize", 1, 20)];
-        router.get(apiPrefix + "/history", ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
+        router.get(apiUrl, ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
+        router.delete(apiUrl, ...userTokenValidators, this.deleteMethod.bind(this));
     }
 }
 
