@@ -151,10 +151,11 @@ describe("HistoryController", () => {
 
     test("Page size limits", () => {
 
-        let modPreload = preload;
         const userID = mongoose.Types.ObjectId(100).toHexString();
         const pageSize = 3;
+        let modPreload = [];
         for(let i = 0; i < preloadEntries; i++) {
+            modPreload.push({ ...preload[i] });
             modPreload[i].userID = userID;
         }
 
@@ -172,5 +173,70 @@ describe("HistoryController", () => {
             .then(response => {
                 expect(response.body.length).toBe(pageSize);
             })
+    });
+
+    test("Delete history in unexisting user", () => {
+        return controller.createEntries(preload)
+            .then(() => {
+                return request(app)
+                    .delete(testURL)
+                    .query({
+                        userID: mongoose.Types.ObjectId().toHexString(),
+                    })
+                    .expect(204);
+            })
+            .then(response => {
+                expect(response.body).toMatchObject({});
+
+                const requests = preload.map((v, i) => {
+                    return request(app)
+                        .get(testURL)
+                        .query({
+                            userID: v.userID,
+                            beforeTimestamp: new Date(),
+                            pageSize: 1
+                        })
+                        .expect(200);
+                });
+
+                return Promise.all(requests);
+            })
+            .then(responses => {
+                responses.forEach((response, i) => {
+                    expect(response.body.length).toBe(1);
+                });
+            });
+    });
+
+    test("Delete history for user", () => {
+        return controller.createEntries(preload)
+            .then(() => {
+                return request(app)
+                    .delete(testURL)
+                    .query({
+                        userID: preload[0].userID
+                    })
+                    .expect(204);
+            })
+            .then(response => {
+                expect(response.body).toMatchObject({});
+                const requests = preload.map((v, i) => {
+                    return request(app)
+                        .get(testURL)
+                        .query({
+                            userID: v.userID,
+                            beforeTimestamp: new Date(),
+                            pageSize: 1
+                        })
+                        .expect(200);
+                });
+
+                return Promise.all(requests);
+            })
+            .then(responses => {
+                responses.forEach((response, i) => {
+                    expect(response.body.length).toBe(i === 0 ? 0 : 1);
+                });
+            });
     });
 });

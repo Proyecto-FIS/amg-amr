@@ -45,8 +45,8 @@ class HistoryController {
      * @returns {DatabaseError}         500 - Database error
      */
     deleteMethod(req, res) {
-        HistoryEntry.find({ userID: req.query.userID }).remove()
-            .then(() => res.status(204))
+        HistoryEntry.deleteMany({ userID: req.query.userID })
+            .then(() => res.sendStatus(204))
             .catch(() => res.status(500).json({ reason: "Database error" }));
     }
 
