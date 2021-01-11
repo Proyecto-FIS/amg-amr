@@ -115,6 +115,7 @@ dist
 
 # VSCode stuff
 *.code-workspace
+*.vscode
 
 # misc
 .directory
