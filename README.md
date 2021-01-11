@@ -17,5 +17,10 @@ Environment variables:
 - TEST_USERNAME: Test username (only in test environment)
 - TEST_PASSWORD: Test user password (only in test environment)
 
+- STRIPE_PUBLIC_KEY: public api key stripe account
+- STRIPE_SECRET_KEY: private api key stripe account
+- STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS: endpoint success webhook
+- API_ENDPOINT_URL: coffaine store api endpoint url
+
 ## API Documentation
 [Swagger docs](https://coffaine-sales.herokuapp.com/api-docs)

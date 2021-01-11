@@ -28,14 +28,18 @@ const PaymentSchema = new Schema({
         type: [ProductSchema],
         required: true
     },
-    paypal_subscription_id: {
+    transaction_payment_id: {
         type: String,
-        required: true
+        required: [true, "Transaction payment id required"]
     },
     price: {
         type: Number,
-        required: true
+        required: [true, "Price required"]
         //validate: /^([0-9]{1,15}$)/
+    },
+    billing_profile_id: {
+        type: Schema.ObjectId,
+        required: [true, "Billing profile id required"]
     }
 });
 

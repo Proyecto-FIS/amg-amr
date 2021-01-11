@@ -33,14 +33,18 @@ const SubscriptionSchema = new Schema({
         required: true,
         default: true
     },
-    paypal_subscription_id: {
+    transaction_subscription_id: {
         type: String,
-        required: true
+        required: [true, "Transaction subscription id required"]
     },
     price: {
         type: Number,
-        required: true
+        required: [true, "Price required"]
         //validate: /^([0-9]{1,15}$)/
+    },
+    billing_profile_id: {
+        type: Schema.Types.ObjectId,
+        required: [true, "Billing profile id required"]
     }
 });
 

@@ -1,6 +1,7 @@
 const express = require("express");
+const Payment = require("../models/Payment");
 
-//  TODO: KEYS
+//  KEYS
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS;
 
@@ -21,16 +22,24 @@ const endpointSecret = process.env.STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS;
  */
 const payMethod = async (req, res) => {
     const {email} = req.body;
+    const {price} = req.body;
+    const {billing_profile_id} = req.body;
     // const {price} = req.body;
-    const {price} = 7500;
     
     const paymentIntent = await stripe.paymentIntents.create({
-        amount: 7500,
+        amount: price*100,
         currency: 'eur',
         // Verify your integration in this guide by including this parameter
         metadata: {integration_check: 'accept_a_payment'},
         receipt_email: email,
       });
+
+      // delete req.body.profile._id;        // Ignore _id to prevent key duplication
+      //   req.body.profile.userID = req.query.userID;
+      //   new Payment(req.body.profile)
+      //   .save()
+      //   .then(doc => res.status(200).send(doc._id))
+      //   .catch(err => res.status(500).json({ reason: "Database error" }));
 
       res.json({'client_secret': paymentIntent['client_secret']})
 };
@@ -38,6 +47,8 @@ const payMethod = async (req, res) => {
 const subscriptionMethod = async (req, res) => {
     const {email, payment_method} = req.body;
 
+
+  // TODO: Si no existe lo creo, y si existe siplementa traigo el customer_id
   const customer = await stripe.customers.create({
     payment_method: payment_method,
     email: email,
