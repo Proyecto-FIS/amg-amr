@@ -5,7 +5,7 @@
     "scripts": {
         "start": "node -r dotenv/config source/boot.js dotenv_config_path=env/devel.env",
         "start:prod": "node -r dotenv/config source/boot.js dotenv_config_path=env/prod.env",
-        "test": "jest ./test --silent",
+        "test": "jest ./test -i --silent",
         "coverage": "npm test -- --coverage"
     },
     "author": "amg98@github.com, a8081@github.com",
