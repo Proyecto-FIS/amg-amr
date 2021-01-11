@@ -28,7 +28,7 @@ const PaymentSchema = new Schema({
         type: [ProductSchema],
         required: true
     },
-    transaction_payment_id: {
+    transaction_payment_id: { // stripe paymentIntent id
         type: String,
         required: [true, "Transaction payment id required"]
     },
