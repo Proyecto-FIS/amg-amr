@@ -97,7 +97,7 @@ class PaymentController {
     req.body.payment.transaction_payment_id = paymentIntent.id;
     req.body.payment.billing_profile_id = billingProfile._id;
     req.body.payment.products = productsToBuy;
-
+    const userToken = req.query.userToken;
     delete req.body.payment._id; // Ignore _id to prevent key duplication
     req.body.payment.userID = req.query.userID;
     new Payment(req.body.payment)
