@@ -4,6 +4,7 @@ const Payment = require("../models/Payment");
 const Validators = require("../middlewares/Validators");
 const axios = require('axios');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const HistoryController = require("../../source/routes/HistoryController");
 
 /**
  * @typedef Product
@@ -49,7 +50,7 @@ class PaymentController {
       products
     } = req.body.payment;
 
-    // TODO: const customer = await axios.get(process.env.API_ENDPOINT_URL + "/customers/" + req.query.userID);
+    const customer = await axios.get(process.env.API_ENDPOINT_URL + "/customers/" + req.query.userID.toHexString());
 
     let identifiers = products.reduce((acc, current) => acc.concat(current._id + ","), "");
     identifiers = identifiers.substring(0, identifiers.length - 1);
@@ -62,6 +63,7 @@ class PaymentController {
       var productsToBuy = result.data.map(function (prod, index) {
         const aux = products.filter(p => p._id == prod._id);
         const product = {};
+        product['_id'] = prod._id
         product['quantity'] = aux[0].quantity;
         const formatAux = prod.format.filter(element => element.name == aux[0].format);
         product['unitPriceEuros'] = formatAux[0].price;
@@ -98,18 +100,41 @@ class PaymentController {
     new Payment(req.body.payment)
       .save()
       .then(doc => {
-        // res.status(200).send(doc._id)
-        res.status(200).json({'id': doc._id,'client_secret': paymentIntent['client_secret']})
-      }).catch(err => {
+        // History entry
+        const entry = {
+          userID: doc.userID,
+          operationType: "payment",
+          products: doc.products
+        };
+        const hC = new HistoryController();
+        return hC.createEntry(entry);
+      }).then(doc => {
+        // Delivery
+        return axios.post(process.env.API_ENDPOINT_URL + "/deliveries", {
+          "historyId": doc._id,
+          "profile": billingProfile,
+          "products": productsToBuy
+        }, {
+          params: {
+            userToken
+          }
+        })
+      }).then(
+        res.status(200).json({
+          'id': doc._id,
+          'client_secret': paymentIntent['client_secret']
+        })
+      ).catch(err => {
         res.status(500).json({
           reason: "Database error"
         })
       });
+
   };
 
   constructor(apiPrefix, router) {
     const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
-    router.post(apiPrefix + "/payment",...userTokenValidators, Validators.Required("payment"), this.payMethod.bind(this));
+    router.post(apiPrefix + "/payment", ...userTokenValidators, Validators.Required("payment"), this.payMethod.bind(this));
   }
 }
 
