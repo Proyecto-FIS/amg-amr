@@ -19,7 +19,8 @@
         "hystrix-dashboard": "^1.0.3",
         "hystrixjs": "^0.2.0",
         "mongoose": "^5.11.1",
-        "rxjs": "^5.0.0"
+        "rxjs": "^5.0.0",
+        "stripe": "^8.129.0"
     },
     "devDependencies": {
         "@types/cors": "^2.8.9",
