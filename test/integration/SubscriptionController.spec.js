@@ -11,13 +11,14 @@ describe("SubscriptionController", () => {
     let app, controller;
 
     // Preload data
-    let preload;
-    const preloadEntries = 5;
+    let preload1;
+    const preloadSubscriptions = 5;
     const sampleProduct = {
         _id: mongoose.Types.ObjectId(1).toHexString(),
         quantity: 5,
         unitPriceEuros: 20
     };
+
 
     beforeAll(() => {
 
@@ -26,20 +27,21 @@ describe("SubscriptionController", () => {
         app = utils.createExpressApp(controller, testURL);
 
         // Create database preload for some tests
-        preload = [];
-        for (let i = 0; i < preloadEntries; i++) {
-            preload.push({
+        preload1 = [];
+        for (let i = 0; i < preloadSubscriptions; i++) {
+            preload1.push({
                 userID: mongoose.Types.ObjectId(i).toHexString(),
                 timestamp: new Date().toISOString(),
-                paypal_subscription_id: "TESTESTESTESTEST",
-                products: [sampleProduct]
+                price: 120,
+                products: [sampleProduct],
+                is_active: true
             });
         }
 
         return db.setup();
     });
 
-    beforeEach(done => mongoose.connection.dropCollection("subscriptionentries", err => done()));
+    beforeEach(done => mongoose.connection.dropCollection("subscriptions", err => done()));
 
     afterAll(() => db.close());
 
@@ -51,22 +53,22 @@ describe("SubscriptionController", () => {
         // Expected result from GET request
         const expectedResult = {
             timestamp: now,
-            price: 19.40,
-            is_active: true,
-            paypal_subscription_id: "TESTESTESTESTEST",
-            products: [sampleProduct]
+            price: 120,
+            products: [sampleProduct],
+            is_active: true
         };
 
-        // Entry to be added
-        const testEntry = {
+        // Subscription to be added
+        const testSubscription = {
             userID: userID,
             timestamp: now,
-            operationType: expectedResult.operationType,
-            products: expectedResult.products
+            price: expectedResult.price,
+            products: expectedResult.products,
+            is_active: expectedResult.is_active
         };
 
         // Create a new subscription entry
-        return controller.createEntry(testEntry)
+        return controller.createSubscription(testSubscription)
             .then(() => {
                 return request(app)
                     .get(testURL)
@@ -82,7 +84,8 @@ describe("SubscriptionController", () => {
 
                 expect(data.length).toBe(1);
                 expect(data[0].timestamp).toStrictEqual(expectedResult.timestamp);
-                expect(data[0].operationType).toBe(expectedResult.operationType);
+                expect(data[0].price).toBe(expectedResult.price);
+                expect(data[0].is_active).toBe(expectedResult.is_active);
                 expect(data[0].products).toMatchObject(expectedResult.products);
                 expect(data[0].userID).toBeUndefined();
             })
@@ -103,12 +106,12 @@ describe("SubscriptionController", () => {
     test("Missing user", () => {
 
         // Preload database
-        return controller.createEntries(preload)
+        return controller.createSubscriptions(preload1)
             .then(() => {
                 return request(app)
                     .get(testURL)
                     .query({
-                        userID: mongoose.Types.ObjectId(preloadEntries + 1).toHexString(),
+                        userID: mongoose.Types.ObjectId(preloadSubscriptions + 1).toHexString(),
                         beforeTimestamp: new Date(),
                         pageSize: 10
                     })
@@ -121,24 +124,23 @@ describe("SubscriptionController", () => {
         const thresholdDate = Date.now();
 
         // Preload database
-        return controller.createEntries(preload)
+        return controller.createSubscriptions(preload1)
             .then(() => {
 
                 // Additional entry for user with entries
-                return controller.createEntry({
-                    userID: preload[0].userID,
+                return controller.createSubscription({
+                    userID: preload1[0].userID,
                     timestamp: new Date(thresholdDate + 100),
-                    price: 19.40,
-                    is_active: true,
-                    paypal_subscription_id: "TESTESTESTESTEST",
-                    products: [sampleProduct]
+                    price: 120,
+                    products: [sampleProduct],
+                    is_active: true
                 })
             })
             .then(() => {
                 return request(app)
                     .get(testURL)
                     .query({
-                        userID: preload[0].userID,
+                        userID: preload1[0].userID,
                         beforeTimestamp: thresholdDate,
                         pageSize: 10
                     })
@@ -147,24 +149,26 @@ describe("SubscriptionController", () => {
             .then(response => {
                 const data = response.body;
                 expect(data.length).toBe(1); // Should return the entry before thresholdDate
-                expect(data[0].timestamp).toStrictEqual(preload[0].timestamp);
-                expect(data[0].is_active).toBe(preload[0].is_active);
-                expect(data[0].price).toBe(preload[0].price);
-                expect(data[0].paypal_subscription_id).toBe(preload[0].paypal_subscription_id);
-                expect(data[0].products).toMatchObject(preload[0].products);
+                expect(data[0].timestamp).toStrictEqual(preload1[0].timestamp);
+                expect(data[0].price).toBe(preload1[0].price);
+                expect(data[0].is_active).toBe(preload1[0].is_active);
+                expect(data[0].products).toMatchObject(preload1[0].products);
             });
     });
 
     test("Page size limits", () => {
 
-        let modPreload = preload;
         const userID = mongoose.Types.ObjectId(100).toHexString();
         const pageSize = 3;
-        for (let i = 0; i < preloadEntries; i++) {
+        let modPreload = [];
+        for (let i = 0; i < preloadSubscriptions; i++) {
+            modPreload.push({
+                ...preload1[i]
+            });
             modPreload[i].userID = userID;
         }
 
-        return controller.createEntries(modPreload)
+        return controller.createSubscriptions(modPreload)
             .then(() => {
                 return request(app)
                     .get(testURL)
@@ -179,4 +183,225 @@ describe("SubscriptionController", () => {
                 expect(response.body.length).toBe(pageSize);
             })
     });
+
+    test("Delete subscription in unexisting user", () => {
+        return controller.createSubscriptions(preload1)
+            .then(() => {
+                return request(app)
+                    .delete(testURL)
+                    .query({
+                        userID: mongoose.Types.ObjectId().toHexString(),
+                    })
+                    .expect(204);
+            })
+            .then(response => {
+                expect(response.body).toMatchObject({});
+
+                const requests = preload1.map((v, i) => {
+                    return request(app)
+                        .get(testURL)
+                        .query({
+                            userID: v.userID,
+                            beforeTimestamp: new Date(),
+                            pageSize: 1
+                        })
+                        .expect(200);
+                });
+
+                return Promise.all(requests);
+            })
+            .then(responses => {
+                responses.forEach((response, i) => {
+                    expect(response.body.length).toBe(1);
+                });
+            });
+    });
+
+    test("Delete subscription for user", () => {
+        return controller.createSubscriptions(preload1)
+            .then(() => {
+                return request(app)
+                    .delete(testURL)
+                    .query({
+                        userID: preload1[0].userID
+                    })
+                    .expect(204);
+            })
+            .then(response => {
+                expect(response.body).toMatchObject({});
+                const requests = preload1.map((v, i) => {
+                    return request(app)
+                        .get(testURL)
+                        .query({
+                            userID: v.userID,
+                            beforeTimestamp: new Date(),
+                            pageSize: 1
+                        })
+                        .expect(200);
+                });
+
+                return Promise.all(requests);
+            })
+            .then(responses => {
+                responses.forEach((response, i) => {
+                    expect(response.body.length).toBe(i === 0 ? 0 : 1);
+                });
+            });
+    });
+
+
+    ///////////////////////////////////////////////////////////////
+    ////////////////////////// Other tests ////////////////////////
+    ///////////////////////////////////////////////////////////////
+
+    // // Preload data
+    // const users = [mongoose.Types.ObjectId(100).toHexString(), mongoose.Types.ObjectId(200).toHexString()];
+    // const preload = [{
+    //         products: [sampleProduct],
+    //         is_active: true,
+    //         transaction_subscription_id: "sub_IkCQQsDnUpEljN",
+    //         price: 120,
+    //         billing_profile_id: 1,
+    //         payment_method_id: "pm_1I8i1VKrHcehiALDJ1uTJvwx",
+    //     },
+    //     {
+    //         products: [sampleProduct],
+    //         is_active: true,
+    //         transaction_subscription_id: "sub_IkCQQsDnUpEljN",
+    //         price: 600,
+    //         billing_profile_id: 1,
+    //         payment_method_id: "pm_1I8i1VKrHcehiALDJ1uTJvwx",
+    //     },
+    // ];
+
+    // test("Missing fields in write", () => {
+    //     return request(app)
+    //         .post(testURL)
+    //         .query({
+    //             userID: mongoose.Types.ObjectId().toHexString()
+    //         })
+    //         .send({
+    //             subscription: {
+    //                 transaction_subscription_id: "sub_AtCQQsTnUpElkR",
+    //                 price: 1234
+    //                 // Missing fields
+    //             }
+    //         })
+    //         .expect(500, {
+    //             reason: "Database error"
+    //         });
+    // });
+
+
+    // // TODO: refactor test
+    // test("Write & read, filtering by user", () => {
+
+    //     return request(app)
+    //         .post(testURL)
+    //         .query({
+    //             userID: users[0]
+    //         })
+    //         .send({
+    //             subscription: {
+    //                 ...preload[0]
+    //             }
+    //         })
+    //         .expect(200)
+    //         .then(response => {
+    //             expect(mongoose.Types.ObjectId.isValid(response.body)).toBeTruthy();
+    //             return request(app)
+    //                 .post(testURL)
+    //                 .query({
+    //                     userID: users[1]
+    //                 })
+    //                 .send({
+    //                     subscription: {
+    //                         ...preload[1]
+    //                     }
+    //                 })
+    //                 .expect(200)
+    //         })
+    //         .then(response => {
+    //             expect(mongoose.Types.ObjectId.isValid(response.body)).toBeTruthy();
+    //             return request(app)
+    //                 .get(testURL)
+    //                 .query({
+    //                     userID: users[0]
+    //                 })
+    //                 .expect(200);
+    //         })
+    //         .then(response => {
+    //             const data = response.body;
+    //             expect(data.length).toBe(1);
+    //             expect(data[0].userID).toBeUndefined();
+    //             expect(data[0]).toMatchObject(preload[0]);
+    //         })
+    // });
+
+    // test("Update existing subscription", () => {
+
+    //     const newEmail = "updatedemail@email.com";
+
+    //     return request(app)
+    //         .post(testURL)
+    //         .query({
+    //             userID: users[0]
+    //         })
+    //         .send({
+    //             subscription: {
+    //                 ...preload[0]
+    //             }
+    //         })
+    //         .expect(200)
+    //         .then(response => {
+    //             expect(mongoose.Types.ObjectId.isValid(response.body)).toBeTruthy();
+    //             return request(app)
+    //                 .put(testURL)
+    //                 .query({
+    //                     userID: users[0]
+    //                 })
+    //                 .send({
+    //                     subscription: {
+    //                         _id: response.body,
+    //                         email: newEmail, // Updated field
+    //                     }
+    //                 })
+    //                 .expect(200);
+    //         })
+    //         .then(response => {
+    //             expect(response.body.email).toBe(newEmail);
+    //         });
+    // });
+
+    // test("Updating subscription from other user", () => {
+
+    //     return request(app)
+    //         .post(testURL)
+    //         .query({
+    //             userID: users[0]
+    //         })
+    //         .send({
+    //             subscription: {
+    //                 ...preload[0]
+    //             }
+    //         })
+    //         .expect(200)
+    //         .then(response => {
+    //             expect(mongoose.Types.ObjectId.isValid(response.body)).toBeTruthy();
+    //             return request(app)
+    //                 .put(testURL)
+    //                 .query({
+    //                     userID: users[1]
+    //                 })
+    //                 .send({
+    //                     subscription: {
+    //                         _id: response.body,
+    //                         email: "newmail@email.com", // Updated field
+    //                     }
+    //                 })
+    //                 .expect(401);
+    //         });
+    // });
+
+
 });
