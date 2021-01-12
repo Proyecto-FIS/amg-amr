@@ -26,7 +26,7 @@ class App {
         const apiPrefix = swagger.getBasePath();
         this.billingProfileController = new BillingProfileController(apiPrefix, this.router);
         this.historyController = new HistoryController(apiPrefix, this.router);
-        this.paymentController = new PaymentController(apiPrefix, this.router);
+        this.paymentController = new PaymentController(apiPrefix, this.router, this.historyController);
         this.subscriptionController = new SubscriptionController(apiPrefix, this.router);
 
         CircuitBreaker.initHystrixDashboard(this.app);

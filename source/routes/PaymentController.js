@@ -4,7 +4,6 @@ const Payment = require("../models/Payment");
 const Validators = require("../middlewares/Validators");
 const axios = require('axios');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const HistoryController = require("../../source/routes/HistoryController");
 
 /**
  * @typedef Product
@@ -50,7 +49,11 @@ class PaymentController {
       products
     } = req.body.payment;
 
-    const customer = await axios.get(process.env.API_ENDPOINT_URL + "/customers/" + req.query.userID.toHexString());
+    const customer_id = req.query.userID.toHexString();
+    const customer = await axios.get(process.env.USERS_MS + "/customers/" + customer_id, {params: {id: customer_id}})
+      .catch(error => {
+        console.error(error)
+      });
 
     let identifiers = products.reduce((acc, current) => acc.concat(current._id + ","), "");
     identifiers = identifiers.substring(0, identifiers.length - 1);
@@ -82,12 +85,12 @@ class PaymentController {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalPrice * 100,
       currency: 'eur',
-      // TODO: customer: customer.stripe_id,
+      customer: customer.data.stripe_id,
       // Verify your integration in this guide by including this parameter
       metadata: {
         integration_check: 'accept_a_payment'
       },
-      receipt_email: billingProfile.email,
+      receipt_email: customer.data.email,
     });
 
     req.body.payment.price = totalPrice;
@@ -104,13 +107,12 @@ class PaymentController {
         const entry = {
           userID: doc.userID,
           operationType: "payment",
-          products: doc.products
+          products: productsToBuy
         };
-        const hC = new HistoryController();
-        return hC.createEntry(entry);
+        return this.historyController.createEntry(entry);
       }).then(doc => {
         // Delivery
-        return axios.post(process.env.API_ENDPOINT_URL + "/deliveries", {
+        return axios.post(process.env.API_DELIVERIES_ENDPOINT + "/deliveries", {
           "historyId": doc._id,
           "profile": billingProfile,
           "products": productsToBuy
@@ -119,12 +121,11 @@ class PaymentController {
             userToken
           }
         })
-      }).then(
+      }).then(doc => {
         res.status(200).json({
-          'id': doc._id,
           'client_secret': paymentIntent['client_secret']
         })
-      ).catch(err => {
+      }).catch(err => {
         res.status(500).json({
           reason: "Database error"
         })
@@ -132,9 +133,10 @@ class PaymentController {
 
   };
 
-  constructor(apiPrefix, router) {
+  constructor(apiPrefix, router, historyController) {
     const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
     router.post(apiPrefix + "/payment", ...userTokenValidators, Validators.Required("payment"), this.payMethod.bind(this));
+    this.historyController = historyController;
   }
 }
 
