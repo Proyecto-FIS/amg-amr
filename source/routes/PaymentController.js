@@ -49,11 +49,7 @@ class PaymentController {
       products
     } = req.body.payment;
 
-    const customer = await axios.get(process.env.API_ENDPOINT_URL + "/customers/" + req.query.userID).then(
-      // TODO: rellenar then
-    ).catch(
-      // TODO: rellenar catch
-    );
+    // TODO: const customer = await axios.get(process.env.API_ENDPOINT_URL + "/customers/" + req.query.userID);
 
     let identifiers = products.reduce((acc, current) => acc.concat(current._id + ","), "");
     identifiers = identifiers.substring(0, identifiers.length - 1);
@@ -84,17 +80,17 @@ class PaymentController {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalPrice * 100,
       currency: 'eur',
-      customer: customer.stripe_id,
+      // TODO: customer: customer.stripe_id,
       // Verify your integration in this guide by including this parameter
       metadata: {
         integration_check: 'accept_a_payment'
       },
-      receipt_email: customer.email,
+      receipt_email: billingProfile.email,
     });
 
     req.body.payment.price = totalPrice;
     req.body.payment.transaction_payment_id = paymentIntent.id;
-    req.body.payment.billing_profile_id = billingProfile.id;
+    req.body.payment.billing_profile_id = billingProfile._id;
     req.body.payment.products = productsToBuy;
 
     delete req.body.payment._id; // Ignore _id to prevent key duplication
@@ -102,8 +98,8 @@ class PaymentController {
     new Payment(req.body.payment)
       .save()
       .then(doc => {
-        res.status(200).send(doc._id)
-        // res.status(200).send({'id': doc._id,'client_secret': paymentIntent['client_secret']})
+        // res.status(200).send(doc._id)
+        res.status(200).json({'id': doc._id,'client_secret': paymentIntent['client_secret']})
       }).catch(err => {
         res.status(500).json({
           reason: "Database error"

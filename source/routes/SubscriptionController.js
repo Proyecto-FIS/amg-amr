@@ -39,6 +39,17 @@ const endpointSecret = process.env.STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS;
  */
 
 class SubscriptionController {
+
+  createSubscription(sub) {
+    const subscription = new Subscription(sub);
+    return subscription.save();
+  }
+
+  createSubscriptions(subs) {
+    const promises = subs.map(entry => this.createSubscription(entry));
+    return Promise.all(promises);
+  }
+
   /**
    * Create a new subscription
    * @route POST /subscription
@@ -134,8 +145,8 @@ class SubscriptionController {
     new Subscription(req.body.subscription)
       .save()
       .then(doc => {
-        res.status(200).send(doc._id)
-        // res.status(200).send({'id': doc._id, 'client_secret': client_secret, 'status': status})
+        // res.status(200).send(doc._id)
+        res.status(200).json({'id': doc._id, 'client_secret': client_secret, 'status': status})
       }).catch(err => {
         res.status(500).json({
           reason: "Database error"
@@ -181,7 +192,7 @@ class SubscriptionController {
    * @returns {UserAuthError}         401 - User is not authorized to perform this operation
    * @returns {DatabaseError}         500 - Database error
    */
-  deleteMethod(req, res) {
+  async deleteMethod(req, res) {
     const sub = Subscription.find({
       _id: req.query.subscriptionID,
       userID: req.query.userID,
@@ -191,22 +202,16 @@ class SubscriptionController {
         _id: req.query.subscriptionID,
         userID: req.query.userID
       })
-      .then(doc => {
-        if (doc) {
-          const deleted = await stripe.subscriptions.del(
-              sub.transaction_subscription_id
-            ).then(
-              res.sendStatus(204)
-            )
-            .catch(err => res.status(500).json({
-              reason: "Stripe delete subscription error"
-            }));
-        } else {
-          res.sendStatus(401)
-        }
-      })
       .catch(err => res.status(500).json({
         reason: "Database error"
+      }));
+      const deleted = await stripe.subscriptions.del(
+        sub.transaction_subscription_id
+      ).then(
+        res.sendStatus(204)
+      )
+      .catch(err => res.status(500).json({
+        reason: "Stripe delete subscription error"
       }));
   }
 
@@ -252,7 +257,7 @@ class SubscriptionController {
     const pageSizeValidators = [Validators.Required("pageSize"), Validators.Range("pageSize", 1, 20)];
     router.get(route, ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
     router.post(apiPrefix + "/subscription", ...userTokenValidators, Validators.Required("subscription"), this.subscriptionMethod.bind(this));
-    router.post(apiPrefix + "/stripewebhook", ...userTokenValidators, Validators.Required("subscription"), this.webhooksMethod.bind(this));
+    // router.post(apiPrefix + "/stripewebhook", ...userTokenValidators, Validators.Required("subscription"), this.webhooksMethod.bind(this));
     router.delete(route, ...userTokenValidators, Validators.Required("subscriptionID"), this.deleteMethod.bind(this));
   }
 }

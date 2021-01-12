@@ -25,7 +25,7 @@ const ProductSchema = new Schema({
         required: true
     }
 });
-
+// TODO: validate model
 const SubscriptionSchema = new Schema({
     userID: Schema.ObjectId,
     timestamp: {

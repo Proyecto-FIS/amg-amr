@@ -17,7 +17,7 @@ const ProductSchema = new Schema({
         required: true
     }
 });
-
+// TODO: validate model
 const PaymentSchema = new Schema({
     userID: Schema.ObjectId,
     timestamp: {
@@ -38,7 +38,7 @@ const PaymentSchema = new Schema({
         //validate: /^([0-9]{1,15}$)/
     },
     billing_profile_id: {
-        type: Schema.ObjectId,
+        type: Schema.Types.ObjectId, // TODO: revisar types
         required: [true, "Billing profile id required"]
     }
 });
