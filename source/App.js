@@ -4,6 +4,7 @@ const cors = require("cors");
 const DatabaseConnection = require("./DatabaseConnection");
 const HistoryController = require("./routes/HistoryController");
 const PaymentController = require("./routes/PaymentController");
+const SubscriptionController = require("./routes/SubscriptionController");
 const BillingProfileController = require("./routes/BillingProfileController");
 const CircuitBreaker = require("./CircuitBreaker");
 
@@ -26,7 +27,7 @@ class App {
         this.billingProfileController = new BillingProfileController(apiPrefix, this.router);
         this.historyController = new HistoryController(apiPrefix, this.router);
         this.paymentController = new PaymentController(apiPrefix, this.router);
-        // require("./routes/Payment").register(apiPrefix, this.router);
+        this.subscriptionController = new SubscriptionController(apiPrefix, this.router);
 
         CircuitBreaker.initHystrixDashboard(this.app);
 
