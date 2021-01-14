@@ -18,16 +18,16 @@ class BillingProfileController {
         BillingProfile.find({
             userID: req.query.userID
         })
-        .select("-userID")
-        .sort("-name")
-        .lean()
-        .exec((err, entries) => {
-            if(err) {
-                res.status(500).json({ reason: "Database error" });
-            } else {
-                res.status(200).json(entries);
-            }
-        });
+            .select("-userID")
+            .sort("-name")
+            .lean()
+            .exec((err, entries) => {
+                if (err) {
+                    res.status(500).json({ reason: "Database error" });
+                } else {
+                    res.status(200).json(entries);
+                }
+            });
     }
 
     /**
@@ -45,9 +45,9 @@ class BillingProfileController {
         delete req.body.profile._id;        // Ignore _id to prevent key duplication
         req.body.profile.userID = req.query.userID;
         new BillingProfile(req.body.profile)
-        .save()
-        .then(doc => res.status(200).send(doc._id))
-        .catch(err => res.status(500).json({ reason: "Database error" }));
+            .save()
+            .then(doc => res.status(200).send(doc._id))
+            .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 
     /**
@@ -63,15 +63,15 @@ class BillingProfileController {
      */
     putMethod(req, res) {
         BillingProfile.findOneAndUpdate({ _id: req.body.profile._id, userID: req.query.userID }, req.body.profile)
-        .then(doc => {
-            if(doc) {
-                return BillingProfile.findById(doc._id);
-            } else {
-                res.sendStatus(401);
-            }
-        })
-        .then(doc => res.status(200).json(doc))
-        .catch(err => res.status(500).json({ reason: "Database error" }));
+            .then(doc => {
+                if (doc) {
+                    return BillingProfile.findById(doc._id);
+                } else {
+                    res.sendStatus(401);
+                }
+            })
+            .then(doc => res.status(200).json(doc))
+            .catch(err => res.status(500).json({ reason: "Database error" }));
     }
 
     /**
@@ -79,16 +79,23 @@ class BillingProfileController {
      * @route DELETE /billing-profile
      * @group Billing profile - Billing profiles per user
      * @param {string} userToken.query.required     - User JWT token
-     * @param {string} profileID.query.required     - Billing profile identifier
+     * @param {string} profileID.query              - Billing profile identifier
      * @returns {BillingProfile}        200 - Returns the deleted billing profile
+     * @returns {}                      204 - Whether all the billing profiles for a certain user have been deleted
      * @returns {ValidationError}       400 - Supplied parameters are invalid
      * @returns {UserAuthError}         401 - User is not authorized to perform this operation
      * @returns {DatabaseError}         500 - Database error
      */
     deleteMethod(req, res) {
-        BillingProfile.findOneAndDelete({ _id: req.query.profileID, userID: req.query.userID })
-        .then(doc => doc ? res.status(200).json(doc) : res.sendStatus(401))
-        .catch(err => res.status(500).json({ reason: "Database error" }));
+        if (req.query.profileID) {
+            BillingProfile.findOneAndDelete({ _id: req.query.profileID, userID: req.query.userID })
+                .then(doc => doc ? res.status(200).json(doc) : res.sendStatus(401))
+                .catch(err => res.status(500).json({ reason: "Database error" }));
+        } else {
+            BillingProfile.deleteMany({ userID: req.query.userID })
+                .then(() => res.sendStatus(204))
+                .catch(() => res.status(500).json({ reason: "Database error" }));
+        }
     }
 
     constructor(apiPrefix, router) {
@@ -98,7 +105,7 @@ class BillingProfileController {
         router.get(route, ...userTokenValidators, this.getMethod.bind(this));
         router.post(route, ...userTokenValidators, Validators.Required("profile"), this.postMethod.bind(this));
         router.put(route, ...userTokenValidators, Validators.Required("profile"), this.putMethod.bind(this));
-        router.delete(route, ...userTokenValidators, Validators.Required("profileID"), this.deleteMethod.bind(this));
+        router.delete(route, ...userTokenValidators, this.deleteMethod.bind(this));
     }
 }
 
