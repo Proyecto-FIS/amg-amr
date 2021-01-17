@@ -27,7 +27,7 @@ class App {
         this.billingProfileController = new BillingProfileController(apiPrefix, this.router);
         this.historyController = new HistoryController(apiPrefix, this.router);
         this.paymentController = new PaymentController(apiPrefix, this.router, this.historyController);
-        this.subscriptionController = new SubscriptionController(apiPrefix, this.router);
+        this.subscriptionController = new SubscriptionController(apiPrefix, this.router, this.historyController);
 
         CircuitBreaker.initHystrixDashboard(this.app);
 
