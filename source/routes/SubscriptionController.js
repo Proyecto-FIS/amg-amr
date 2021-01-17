@@ -104,25 +104,29 @@ class SubscriptionController {
 
     // Obtengo el precio total a partir de la lista de productos extraida de la base de datos para evitar que se edite el precio en frontend
     const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0);
-    
+
     const paymentMethodAttached = await stripe.paymentMethods.attach(
-      payment_method_id,
-      {customer: customer.data.stripe_id}
-      ).catch(err =>{
-        console.log('¡Ha habido un error! ' + err);
-      });
+      payment_method_id, {
+        customer: customer.data.stripe_id
+      }
+    ).catch(err => {
+      console.log('¡Ha habido un error! ' + err);
+    });
 
     const customerStripe = await stripe.customers.update(
-      customer.data.stripe_id,
-      {invoice_settings: {
-        default_payment_method: payment_method_id,
-      }
-    }).catch(err =>{
+      customer.data.stripe_id, {
+        invoice_settings: {
+          default_payment_method: payment_method_id,
+        }
+      }).catch(err => {
       console.log('¡Ha habido un error! ' + err);
     });
 
     let prices = productsToBuy.reduce((acc, current) => {
-      acc.push({quantity: current.quantity, price: current.stripe_id_price});
+      acc.push({
+        quantity: current.quantity,
+        price: current.stripe_id_price
+      });
       return acc;
     }, []);
 
@@ -130,7 +134,7 @@ class SubscriptionController {
       customer: customer.data.stripe_id,
       items: prices,
       expand: ['latest_invoice.payment_intent']
-    }).catch(err =>{
+    }).catch(err => {
       console.log('¡Ha habido un error! ' + err);
     });
     const status = subscription['latest_invoice']['payment_intent']['status']
@@ -146,7 +150,7 @@ class SubscriptionController {
     delete req.body.subscription._id; // Ignore _id to prevent key duplication
     req.body.subscription.userID = req.query.userID;
     const userToken = req.query.userToken;
-    const productsHistoryAndDeliveries = productsToBuy.filter( p => {
+    const productsHistoryAndDeliveries = productsToBuy.filter(p => {
       const product = {};
       product['quantity'] = p.quantity;
       product['unitPriceEuros'] = p.price;
@@ -189,30 +193,38 @@ class SubscriptionController {
 
 
   async webhooksMethod(req, res) {
-          const sig = req.headers['stripe-signature'];
-          let event;
+    const sig = req.headers['stripe-signature'];
+    let event;
 
-          try {
-            event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
-          }
-          catch (err) {
-            return res.status(400).send(`Webhook Error: ${err.message}`);
-          }
-          // Handle the event
-          switch (event.type) {
-            case 'payment_intent.succeeded': {
-              const email = event['data']['object']['receipt_email'] // contains the email that will recive the recipt for the payment (users email usually)
-              console.log(`PaymentIntent was successful for ${email}!`)
-              break;
-            }
-            default:
-              // Unexpected event type
-              return res.status(400).end();
-          }
+    try {
+      event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    } catch (err) {
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    // Handle the event
+    switch (event.type) {
+      case 'payment_intent.succeeded': {
+        const email = event['data']['object']['receipt_email'] // contains the email that will recive the recipt for the payment (users email usually)
+        console.log(`PaymentIntent was successful for ${email}!`)
+        break;
+      }
+      default:
+        // Unexpected event type
+        return res.status(400).end();
+    }
 
-          // Return a 200 response to acknowledge receipt of the event
-          res.json({received: true});
-      };
+    // Return a 200 response to acknowledge receipt of the event
+    res.json({
+      received: true
+    });
+  };
+
+
+  async deleteStripeSubscription(sub) {
+    return await stripe.subscriptions.del(
+      sub.transaction_subscription_id
+    );
+  }
 
   /**
    * Deactivates an existing subscription
@@ -234,21 +246,15 @@ class SubscriptionController {
       _id: req.query.subscriptionID,
       userID: req.query.userID
     }).then(doc => {
-      this.deleteStripeSubscription(doc)
+      return this.deleteStripeSubscription(doc);
     }).then(doc => {
       res.sendStatus(204)
     }).catch(err => res.status(500).json({
       reason: "Database error"
     }));
-
-    
   }
 
-  async deleteStripeSubscription (sub) {
-    return await stripe.subscriptions.del(
-      sub.transaction_subscription_id
-    )
-  }
+
 
   /**
    * Get all user subscriptions
