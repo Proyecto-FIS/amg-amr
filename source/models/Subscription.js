@@ -16,11 +16,11 @@ const ProductSchema = new Schema({
         min: 0,
         required: true
     },
-    stripe_price: {
+    stripe_id_price: {
         type: String,
         required: true
     },
-    stripe_product: {
+    stripe_id_product: {
         type: String,
         required: true
     }

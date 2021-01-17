@@ -1,11 +1,8 @@
 const express = require("express");
 const AuthorizeJWT = require("../middlewares/AuthorizeJWT");
-const Payment = require("../models/Payment");
+const Subscription = require("../models/Subscription");
 const Validators = require("../middlewares/Validators");
 const axios = require('axios');
-const {
-  Subscription
-} = require("rxjs");
 
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -94,7 +91,7 @@ class SubscriptionController {
         const aux = products.filter(p => p._id == prod._id);
         const product = {};
         product['quantity'] = aux[0].quantity;
-        product['stripe_id_product'] = aux[0].stripe_id;
+        product['stripe_id_product'] = prod.stripe_id;
         const formatAux = prod.format.filter(element => element.name == aux[0].format);
         product['unitPriceEuros'] = formatAux[0].price;
         product['stripe_id_price'] = formatAux[0].stripe_id;
@@ -107,24 +104,34 @@ class SubscriptionController {
 
     // Obtengo el precio total a partir de la lista de productos extraida de la base de datos para evitar que se edite el precio en frontend
     const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0);
+    
+    const paymentMethodAttached = await stripe.paymentMethods.attach(
+      payment_method_id,
+      {customer: customer.data.stripe_id}
+      ).catch(err =>{
+        console.log('¡Ha habido un error! ' + err);
+      });
 
-    const customer_stripe_id = customer.stripe_id;
-    const customerStripe = await stripe.customers.update({
-      customer_stripe_id,
-      payment_method: payment_method_id,
-      invoice_settings: {
+    const customerStripe = await stripe.customers.update(
+      customer.data.stripe_id,
+      {invoice_settings: {
         default_payment_method: payment_method_id,
-      },
+      }
+    }).catch(err =>{
+      console.log('¡Ha habido un error! ' + err);
     });
 
-    let prices = productsToBuy.reduce((acc, current) => acc.push({
-      price: current.stripe_id_price
-    }), []);
+    let prices = productsToBuy.reduce((acc, current) => {
+      acc.push({quantity: current.quantity, price: current.stripe_id_price});
+      return acc;
+    }, []);
 
     const subscription = await stripe.subscriptions.create({
-      customer: customer.stripe_id,
+      customer: customer.data.stripe_id,
       items: prices,
       expand: ['latest_invoice.payment_intent']
+    }).catch(err =>{
+      console.log('¡Ha habido un error! ' + err);
     });
     const status = subscription['latest_invoice']['payment_intent']['status']
     const client_secret = subscription['latest_invoice']['payment_intent']['client_secret']
@@ -138,6 +145,14 @@ class SubscriptionController {
 
     delete req.body.subscription._id; // Ignore _id to prevent key duplication
     req.body.subscription.userID = req.query.userID;
+    const userToken = req.query.userToken;
+    const productsHistoryAndDeliveries = productsToBuy.filter( p => {
+      const product = {};
+      product['quantity'] = p.quantity;
+      product['unitPriceEuros'] = p.price;
+      return product;
+    });
+
     new Subscription(req.body.subscription)
       .save()
       .then(doc => {
@@ -145,7 +160,7 @@ class SubscriptionController {
         const entry = {
           userID: doc.userID,
           operationType: "subscription",
-          products: productsToBuy
+          products: productsHistoryAndDeliveries
         };
         return this.historyController.createEntry(entry);
       }).then(doc => {
@@ -153,7 +168,7 @@ class SubscriptionController {
         return axios.post(process.env.API_DELIVERIES_ENDPOINT + "/deliveries", {
           "historyId": doc._id,
           "profile": billingProfile,
-          "products": productsToBuy
+          "products": productsHistoryAndDeliveries
         }, {
           params: {
             userToken
@@ -268,7 +283,7 @@ class SubscriptionController {
       });
   };
 
-  constructor(apiPrefix, router) {
+  constructor(apiPrefix, router, historyController) {
     const route = apiPrefix + "/subscription";
     const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
     const beforeTimestampValidators = [Validators.Required("beforeTimestamp"), Validators.ToDate("beforeTimestamp")];
@@ -277,6 +292,7 @@ class SubscriptionController {
     router.post(apiPrefix + "/subscription", ...userTokenValidators, Validators.Required("subscription"), this.subscriptionMethod.bind(this));
     router.post(apiPrefix + "/stripewebhook", ...userTokenValidators, Validators.Required("subscription"), this.webhooksMethod.bind(this));
     router.delete(route, ...userTokenValidators, Validators.Required("subscriptionID"), this.deleteMethod.bind(this));
+    this.historyController = historyController;
   }
 }
 
