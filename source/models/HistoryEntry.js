@@ -32,6 +32,10 @@ const HistoryEntrySchema = new Schema({
     products: {
         type: [ProductSchema],
         required: true
+    },
+    transaction_id: {
+        type: String,
+        required: true
     }
 });
 

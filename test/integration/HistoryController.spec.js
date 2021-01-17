@@ -32,7 +32,8 @@ describe("HistoryController", () => {
                 userID: mongoose.Types.ObjectId(i).toHexString(),
                 timestamp: new Date().toISOString(),
                 operationType: "payment",
-                products: [sampleProduct]
+                products: [sampleProduct],
+                transaction_id: "123"
             });
         }
 
@@ -52,7 +53,8 @@ describe("HistoryController", () => {
         const expectedResult = {
             timestamp: now,
             operationType: "payment",
-            products: [sampleProduct]
+            products: [sampleProduct],
+            transaction_id: "123"
         };
 
         // Entry to be added
@@ -60,7 +62,8 @@ describe("HistoryController", () => {
             userID: userID,
             timestamp: now,
             operationType: expectedResult.operationType,
-            products: expectedResult.products
+            products: expectedResult.products,
+            transaction_id: expectedResult.transaction_id
         };
 
         // Create a new history entry
@@ -82,6 +85,7 @@ describe("HistoryController", () => {
                 expect(data[0].timestamp).toStrictEqual(expectedResult.timestamp);
                 expect(data[0].operationType).toBe(expectedResult.operationType);
                 expect(data[0].products).toMatchObject(expectedResult.products);
+                expect(data[0].transaction_id).toBe(expectedResult.transaction_id);
                 expect(data[0].userID).toBeUndefined();
             })
     });
@@ -127,7 +131,8 @@ describe("HistoryController", () => {
                     userID: preload[0].userID,
                     timestamp: new Date(thresholdDate + 100),
                     operationType: "payment",
-                    products: [sampleProduct]
+                    products: [sampleProduct],
+                    transaction_id: "123"
                 })
             })
             .then(() => {
@@ -146,6 +151,7 @@ describe("HistoryController", () => {
                 expect(data[0].timestamp).toStrictEqual(preload[0].timestamp);
                 expect(data[0].operationType).toBe(preload[0].operationType);
                 expect(data[0].products).toMatchObject(preload[0].products);
+                expect(data[0].transaction_id).toBe(preload[0].transaction_id);
             });
     });
 

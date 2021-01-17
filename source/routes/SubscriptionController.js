@@ -160,7 +160,8 @@ class SubscriptionController {
         const entry = {
           userID: doc.userID,
           operationType: "subscription",
-          products: productsHistoryAndDeliveries
+          products: productsHistoryAndDeliveries,
+          transaction_id: doc._id
         };
         return this.historyController.createEntry(entry);
       }).then(doc => {
