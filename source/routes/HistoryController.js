@@ -21,7 +21,7 @@ class HistoryController {
             userID: req.query.userID,
             timestamp: { $lt: req.query.beforeTimestamp }
         })
-        .select("timestamp operationType products")
+        .select("timestamp operationType products transaction_id")
         .limit(parseInt(req.query.pageSize))
         .sort("-timestamp")
         .lean()

@@ -107,7 +107,8 @@ class PaymentController {
         const entry = {
           userID: doc.userID,
           operationType: "payment",
-          products: productsToBuy
+          products: productsToBuy,
+          transaction_id: doc._id
         };
         return this.historyController.createEntry(entry);
       }).then(doc => {

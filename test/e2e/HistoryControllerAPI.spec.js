@@ -27,7 +27,8 @@ describe("HistoryController API", () => {
                     quantity: 12,
                     unitPriceEuros: 4
                 }
-            ]
+            ],
+            transaction_id: "123"
         };
     });
 
@@ -95,6 +96,7 @@ describe("HistoryController API", () => {
                 expect(response.body[0].timestamp).toBe(testEntry.timestamp);
                 expect(response.body[0].operationType).toBe(testEntry.operationType);
                 expect(response.body[0].products).toMatchObject(testEntry.products);
+                expect(response.body[0].transaction_id).toBe(testEntry.transaction_id);
             });
     });
 
@@ -116,6 +118,7 @@ describe("HistoryController API", () => {
                 expect(response.body[0].timestamp).toBe(testEntry.timestamp);
                 expect(response.body[0].operationType).toBe(testEntry.operationType);
                 expect(response.body[0].products).toMatchObject(testEntry.products);
+                expect(response.body[0].transaction_id).toBe(testEntry.transaction_id);
 
                 return makeRequest()
                     .delete(testURL)
