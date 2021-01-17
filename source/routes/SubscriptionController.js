@@ -72,11 +72,15 @@ class SubscriptionController {
       cardElement
     } = req.body;
 
-    const customer = await axios.get(process.env.API_ENDPOINT_URL + "/customers/" + req.query.userID).then(
-      // TODO: rellenar then
-    ).catch(
-      // TODO: rellenar catch
-    );
+    const customer_id = req.query.userID.toHexString();
+    const customer = await axios.get(process.env.USERS_MS + "/customers/" + customer_id, {
+        params: {
+          id: customer_id
+        }
+      })
+      .catch(error => {
+        console.error(error)
+      });
 
     let identifiers = products.reduce((acc, current) => acc.concat(current._id + ","), "");
     identifiers = identifiers.substring(0, identifiers.length - 1);
@@ -136,7 +140,7 @@ class SubscriptionController {
 
     req.body.subscription.price = totalPrice;
     req.body.subscription.transaction_subscription_id = subscription.id;
-    req.body.subscription.billing_profile_id = billingProfile.id;
+    req.body.subscription.billing_profile_id = billingProfile._id;
     req.body.subscription.products = productsToBuy;
     req.body.subscription.payment_method_id = payment_method.id
 
@@ -145,8 +149,29 @@ class SubscriptionController {
     new Subscription(req.body.subscription)
       .save()
       .then(doc => {
-        // res.status(200).send(doc._id)
-        res.status(200).json({'id': doc._id, 'client_secret': client_secret, 'status': status})
+        // History entry
+        const entry = {
+          userID: doc.userID,
+          operationType: "subscription",
+          products: productsToBuy
+        };
+        return this.historyController.createEntry(entry);
+      }).then(doc => {
+        // Delivery
+        return axios.post(process.env.API_DELIVERIES_ENDPOINT + "/deliveries", {
+          "historyId": doc._id,
+          "profile": billingProfile,
+          "products": productsToBuy
+        }, {
+          params: {
+            userToken
+          }
+        })
+      }).then(doc => {
+        res.status(200).json({
+          'client_secret': client_secret,
+          'status': status
+        })
       }).catch(err => {
         res.status(500).json({
           reason: "Database error"
@@ -155,31 +180,31 @@ class SubscriptionController {
   }
 
 
-  // async webhooksMethod(req, res) {
-  //         const sig = req.headers['stripe-signature'];
-  //         let event;
+  async webhooksMethod(req, res) {
+          const sig = req.headers['stripe-signature'];
+          let event;
 
-  //         try {
-  //           event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
-  //         }
-  //         catch (err) {
-  //           return res.status(400).send(`Webhook Error: ${err.message}`);
-  //         }
-  //         // Handle the event
-  //         switch (event.type) {
-  //           case 'payment_intent.succeeded': {
-  //             const email = event['data']['object']['receipt_email'] // contains the email that will recive the recipt for the payment (users email usually)
-  //             console.log(`PaymentIntent was successful for ${email}!`)
-  //             break;
-  //           }
-  //           default:
-  //             // Unexpected event type
-  //             return res.status(400).end();
-  //         }
+          try {
+            event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+          }
+          catch (err) {
+            return res.status(400).send(`Webhook Error: ${err.message}`);
+          }
+          // Handle the event
+          switch (event.type) {
+            case 'payment_intent.succeeded': {
+              const email = event['data']['object']['receipt_email'] // contains the email that will recive the recipt for the payment (users email usually)
+              console.log(`PaymentIntent was successful for ${email}!`)
+              break;
+            }
+            default:
+              // Unexpected event type
+              return res.status(400).end();
+          }
 
-  //         // Return a 200 response to acknowledge receipt of the event
-  //         res.json({received: true});
-  //     };
+          // Return a 200 response to acknowledge receipt of the event
+          res.json({received: true});
+      };
 
   /**
    * Deactivates an existing subscription
@@ -193,26 +218,22 @@ class SubscriptionController {
    * @returns {DatabaseError}         500 - Database error
    */
   async deleteMethod(req, res) {
-    const sub = Subscription.find({
-      _id: req.query.subscriptionID,
-      userID: req.query.userID,
-    })
-
+    // const sub = Subscription.find({
+    //   _id: req.query.subscriptionID,
+    //   userID: req.query.userID,
+    // })
     Subscription.findOneAndDelete({
-        _id: req.query.subscriptionID,
-        userID: req.query.userID
-      })
-      .catch(err => res.status(500).json({
-        reason: "Database error"
-      }));
+      _id: req.query.subscriptionID,
+      userID: req.query.userID
+    }).then(doc => {
       const deleted = await stripe.subscriptions.del(
-        sub.transaction_subscription_id
-      ).then(
-        res.sendStatus(204)
+        doc.transaction_subscription_id
       )
-      .catch(err => res.status(500).json({
-        reason: "Stripe delete subscription error"
-      }));
+    }).then(doc => {
+      res.sendStatus(204)
+    }).catch(err => res.status(500).json({
+      reason: "Database error"
+    }));
   }
 
 
@@ -257,7 +278,7 @@ class SubscriptionController {
     const pageSizeValidators = [Validators.Required("pageSize"), Validators.Range("pageSize", 1, 20)];
     router.get(route, ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
     router.post(apiPrefix + "/subscription", ...userTokenValidators, Validators.Required("subscription"), this.subscriptionMethod.bind(this));
-    // router.post(apiPrefix + "/stripewebhook", ...userTokenValidators, Validators.Required("subscription"), this.webhooksMethod.bind(this));
+    router.post(apiPrefix + "/stripewebhook", ...userTokenValidators, Validators.Required("subscription"), this.webhooksMethod.bind(this));
     router.delete(route, ...userTokenValidators, Validators.Required("subscriptionID"), this.deleteMethod.bind(this));
   }
 }
