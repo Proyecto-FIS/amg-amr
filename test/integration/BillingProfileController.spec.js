@@ -200,5 +200,47 @@ describe("BillingProfileController", () => {
                     })
                     .expect(401);
             });
-    })
+    });
+
+    test("Delete all profiles", () => {
+
+        return request(app)
+            .post(testURL)
+            .query({ userID: users[0] })
+            .send({
+                profile: { ...preload[0] }
+            })
+            .expect(200)
+            .then(() => {
+                return request(app)
+                    .post(testURL)
+                    .query({ userID: users[1] })
+                    .send({
+                        profile: { ...preload[1] }
+                    })
+                    .expect(200);
+            })
+            .then(() => {
+                return request(app)
+                    .delete(testURL)
+                    .query({ userID: users[0] })
+                    .expect(204);
+            })
+            .then(() => {
+                return request(app)
+                    .get(testURL)
+                    .query({ userID: users[0] })
+                    .expect(200);
+            })
+            .then(response => {
+                expect(response.body.length).toBe(0);
+                return request(app)
+                    .get(testURL)
+                    .query({ userID: users[1] })
+                    .expect(200);
+            })
+            .then(response => {
+                expect(response.body.length).toBe(1);
+            })
+    });
 });

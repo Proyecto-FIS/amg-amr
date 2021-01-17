@@ -66,13 +66,6 @@ describe("BillingProfile API", () => {
             .query({ userToken })
             .expect(400, { reason: "Missing fields" });
     });
-
-    test("Missing profileID in DELETE", () => {
-        return makeRequest()
-            .delete(testURL)
-            .query({ userToken })
-            .expect(400, { reason: "Missing fields" });
-    });
     
     test("Correct CRUD", () => {
         
