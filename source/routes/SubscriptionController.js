@@ -67,10 +67,10 @@ class SubscriptionController {
     } = req.body;
     const {
       products
-    } = req.body;
+    } = req.body.subscription;
     const {
-      cardElement
-    } = req.body;
+      payment_method_id
+    } = req.body.subscription;
 
     const customer_id = req.query.userID.toHexString();
     const customer = await axios.get(process.env.USERS_MS + "/customers/" + customer_id, {
@@ -94,10 +94,10 @@ class SubscriptionController {
         const aux = products.filter(p => p._id == prod._id);
         const product = {};
         product['quantity'] = aux[0].quantity;
+        product['stripe_id_product'] = aux[0].stripe_id;
         const formatAux = prod.format.filter(element => element.name == aux[0].format);
         product['unitPriceEuros'] = formatAux[0].price;
-        product['stripePrice'] = formatAux[0].stripe_price;
-        product['stripeProduct'] = formatAux[0].stripe_product;
+        product['stripe_id_price'] = formatAux[0].stripe_id;
         return product;
       })
       return productsToBuy
@@ -106,27 +106,19 @@ class SubscriptionController {
     });
 
     // Obtengo el precio total a partir de la lista de productos extraida de la base de datos para evitar que se edite el precio en frontend
-    const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0)
-
-    const payment_method = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-      billing_details: {
-        email: customer.email,
-      },
-    });
+    const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0);
 
     const customer_stripe_id = customer.stripe_id;
     const customerStripe = await stripe.customers.update({
       customer_stripe_id,
-      payment_method: payment_method,
+      payment_method: payment_method_id,
       invoice_settings: {
-        default_payment_method: payment_method,
+        default_payment_method: payment_method_id,
       },
     });
 
     let prices = productsToBuy.reduce((acc, current) => acc.push({
-      price: current.stripe_price
+      price: current.stripe_id_price
     }), []);
 
     const subscription = await stripe.subscriptions.create({
@@ -142,7 +134,7 @@ class SubscriptionController {
     req.body.subscription.transaction_subscription_id = subscription.id;
     req.body.subscription.billing_profile_id = billingProfile._id;
     req.body.subscription.products = productsToBuy;
-    req.body.subscription.payment_method_id = payment_method.id
+    req.body.subscription.payment_method_id = payment_method_id
 
     delete req.body.subscription._id; // Ignore _id to prevent key duplication
     req.body.subscription.userID = req.query.userID;
@@ -226,16 +218,21 @@ class SubscriptionController {
       _id: req.query.subscriptionID,
       userID: req.query.userID
     }).then(doc => {
-      const deleted = await stripe.subscriptions.del(
-        doc.transaction_subscription_id
-      )
+      this.deleteStripeSubscription(doc)
     }).then(doc => {
       res.sendStatus(204)
     }).catch(err => res.status(500).json({
       reason: "Database error"
     }));
+
+    
   }
 
+  async deleteStripeSubscription (sub) {
+    return await stripe.subscriptions.del(
+      sub.transaction_subscription_id
+    )
+  }
 
   /**
    * Get all user subscriptions
