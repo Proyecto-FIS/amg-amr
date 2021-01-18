@@ -219,11 +219,12 @@ class SubscriptionController {
     });
   };
 
-
-  async deleteStripeSubscription(sub) {
+  async deleteStripeSubscription(transaction_subscription_id) {
     return await stripe.subscriptions.del(
-      sub.transaction_subscription_id
-    );
+      transaction_subscription_id
+    ).catch(err => {
+      console.log("Error Subscription Stripe Delete: " + err);
+    });
   }
 
   /**
@@ -232,29 +233,26 @@ class SubscriptionController {
    * @group subscription - Monthly subcription
    * @param {integer} subscriptionID - Subscription identifier
    * @param {string}  userToken.query.required         - User JWT token
-   * @returns {}                      204 - Returns nothing
+   * @returns {Subscription}                      204 - Returns subscription data stored in stripe
    * @returns {ValidationError}       400 - Supplied parameters are invalid
    * @returns {UserAuthError}         401 - User is not authorized to perform this operation
    * @returns {DatabaseError}         500 - Database error
    */
-  async deleteMethod(req, res) {
-    // const sub = Subscription.find({
-    //   _id: req.query.subscriptionID,
-    //   userID: req.query.userID,
-    // })
-    Subscription.findOneAndDelete({
-      _id: req.query.subscriptionID,
-      userID: req.query.userID
-    }).then(doc => {
-      return this.deleteStripeSubscription(doc);
-    }).then(doc => {
-      res.sendStatus(204)
-    }).catch(err => res.status(500).json({
-      reason: "Database error"
-    }));
+  deleteMethod(req, res) {
+    Subscription.findOneAndUpdate({ _id: req.query.subscriptionID, userID: req.query.userID }, { is_active: false })
+        .then(doc => {
+            if (doc) {
+                return Subscription.findById(doc._id);
+            } else {
+                res.sendStatus(401);
+            }
+        })
+        .then(doc => {
+          return this.deleteStripeSubscription(doc.transaction_subscription_id);
+        })
+        .then(doc => res.status(200).json(doc))
+        .catch(err => res.status(500).json({ reason: "Database error" }));
   }
-
-
 
   /**
    * Get all user subscriptions
