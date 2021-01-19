@@ -79,6 +79,7 @@ class SubscriptionController {
         console.error(error)
       });
 
+    let productsHistoryAndDeliveries = [];
     let identifiers = products.reduce((acc, current) => acc.concat(current._id + ","), "");
     identifiers = identifiers.substring(0, identifiers.length - 1);
     // TODO: cambiar ENDPOINT cuando el microservicio de products actualice el api gateway
@@ -90,11 +91,16 @@ class SubscriptionController {
       var productsToBuy = result.data.map(function (prod, index) {
         const aux = products.filter(p => p._id == prod._id);
         const product = {};
+        const product2 = {};
+        product2['_id'] = aux[0]._id;
+        product2['quantity'] = aux[0].quantity;
         product['quantity'] = aux[0].quantity;
         product['stripe_id_product'] = prod.stripe_id;
         const formatAux = prod.format.filter(element => element.name == aux[0].format);
         product['unitPriceEuros'] = formatAux[0].price;
+        product2['unitPriceEuros'] = formatAux[0].price;
         product['stripe_id_price'] = formatAux[0].stripe_id;
+        productsHistoryAndDeliveries.push(product2);
         return product;
       })
       return productsToBuy
@@ -150,13 +156,6 @@ class SubscriptionController {
     delete req.body.subscription._id; // Ignore _id to prevent key duplication
     req.body.subscription.userID = req.query.userID;
     const userToken = req.query.userToken;
-    const productsHistoryAndDeliveries = productsToBuy.filter(p => {
-      const product = {};
-      product['_id'] = p._id;
-      product['quantity'] = p.quantity;
-      product['unitPriceEuros'] = p.price;
-      return product;
-    });
 
     new Subscription(req.body.subscription)
       .save()
