@@ -152,6 +152,7 @@ class SubscriptionController {
     const userToken = req.query.userToken;
     const productsHistoryAndDeliveries = productsToBuy.filter(p => {
       const product = {};
+      product['_id'] = p._id;
       product['quantity'] = p.quantity;
       product['unitPriceEuros'] = p.price;
       return product;
@@ -226,6 +227,18 @@ class SubscriptionController {
       console.log("Error Subscription Stripe Delete: " + err);
     });
   }
+  async deleteAllStripeSubscription(subscriptions) {
+    let n = 0;
+    subscriptions.forEach((element) => {
+        stripe.subscriptions.del(
+          element.transaction_subscription_id
+        ).catch(err => {
+          console.log("Error Subscription Stripe Delete: " + err);
+        });
+      n++;
+    });
+    return n;
+  }
 
   /**
    * Deactivates an existing subscription
@@ -239,19 +252,57 @@ class SubscriptionController {
    * @returns {DatabaseError}         500 - Database error
    */
   deleteMethod(req, res) {
-    Subscription.findOneAndUpdate({ _id: req.query.subscriptionID, userID: req.query.userID }, { is_active: false })
-        .then(doc => {
-            if (doc) {
-                return Subscription.findById(doc._id);
-            } else {
-                res.sendStatus(401);
-            }
-        })
-        .then(doc => {
-          return this.deleteStripeSubscription(doc.transaction_subscription_id);
-        })
-        .then(doc => res.status(200).json(doc))
-        .catch(err => res.status(500).json({ reason: "Database error" }));
+    Subscription.findOneAndUpdate({
+        _id: req.query.subscriptionID,
+        userID: req.query.userID
+      }, {
+        is_active: false
+      })
+      .then(doc => {
+        if (doc) {
+          return Subscription.findById(doc._id);
+        } else {
+          res.sendStatus(401);
+        }
+      })
+      .then(doc => {
+        return this.deleteStripeSubscription(doc.transaction_subscription_id);
+      })
+      .then(doc => res.status(200).json(doc))
+      .catch(err => res.status(500).json({
+        reason: "Database error"
+      }));
+
+  }
+  /**
+   * Deactivates all users subscription
+   * @route DELETE /all-subscription
+   * @group subscription - Monthly subcription
+   * @param {string}  userToken.query.required         - User JWT token
+   * @returns {}                      204 - Returns nothing
+   * @returns {ValidationError}       400 - Supplied parameters are invalid
+   * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+   * @returns {DatabaseError}         500 - Database error
+   */
+  deleteAllMethod(req, res) {
+    const subs = Subscription.find({
+        userID: req.query.userID,
+        is_active: true
+      }).then((subscriptions) => {
+        if (subscriptions && subscriptions.length > 0) {
+          return this.deleteAllStripeSubscription(subscriptions);
+        }
+      }).then(() => {
+        return Subscription.updateMany({
+          userID: req.query.userID
+        }, {
+          is_active: false
+        });
+      })
+      .then(doc => res.status(204).json(doc ? doc : {"reason":"User has no subscription active"}))
+      .catch(err => res.status(500).json({
+        reason: "Database error" + err
+      }));
   }
 
   /**
@@ -297,6 +348,7 @@ class SubscriptionController {
     router.post(apiPrefix + "/subscription", ...userTokenValidators, Validators.Required("subscription"), this.subscriptionMethod.bind(this));
     router.post(apiPrefix + "/stripewebhook", ...userTokenValidators, Validators.Required("subscription"), this.webhooksMethod.bind(this));
     router.delete(route, ...userTokenValidators, Validators.Required("subscriptionID"), this.deleteMethod.bind(this));
+    router.delete(apiPrefix + "/all-subscription", ...userTokenValidators, this.deleteAllMethod.bind(this));
     this.historyController = historyController;
   }
 }
