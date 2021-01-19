@@ -18,11 +18,15 @@ const ProductSchema = new Schema({
     },
     stripe_id_price: {
         type: String,
-        required: true
+        required: true,
+        minlength: 1,
+        maxlength: 100
     },
     stripe_id_product: {
         type: String,
-        required: true
+        required: true,
+        minlength: 1,
+        maxlength: 100
     }
 });
 // TODO: validate model
@@ -48,15 +52,16 @@ const SubscriptionSchema = new Schema({
     price: {
         type: Number,
         required: [true, "Price required"]
-        //validate: /^([0-9]{1,15}$)/
     },
     billing_profile_id: {
-        type: Schema.Types.ObjectId, // TODO: quitar el Types
+        type: Schema.Types.ObjectId,
         required: [true, "Billing profile id required"]
     },
     payment_method_id: {
         type: String,
-        required: true
+        required: true,
+        minlength: 1,
+        maxlength: 100
     }
 });
 

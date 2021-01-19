@@ -298,8 +298,9 @@ class SubscriptionController {
           is_active: false
         });
       })
-      .then(doc => res.status(204).json(doc ? doc : {"reason":"User has no subscription active"}))
-      .catch(err => res.status(500).json({
+      .then(doc => {
+        res.status(200).json(doc.nModified > 0 ? doc : {"reason":"User has no subscription active"})
+      }).catch(err => res.status(500).json({
         reason: "Database error" + err
       }));
   }
