@@ -229,11 +229,11 @@ class SubscriptionController {
   async deleteAllStripeSubscription(subscriptions) {
     let n = 0;
     subscriptions.forEach((element) => {
-        stripe.subscriptions.del(
-          element.transaction_subscription_id
-        ).catch(err => {
-          console.log("Error Subscription Stripe Delete: " + err);
-        });
+      stripe.subscriptions.del(
+        element.transaction_subscription_id
+      ).catch(err => {
+        console.log("Error Subscription Stripe Delete: " + err);
+      });
       n++;
     });
     return n;
@@ -267,10 +267,14 @@ class SubscriptionController {
       .then(doc => {
         return this.deleteStripeSubscription(doc.transaction_subscription_id);
       })
-      .then(doc => res.status(200).json(doc))
-      .catch(err => res.status(500).json({
-        reason: "Database error"
-      }));
+      .then(doc => {
+        res.status(200).json(doc ? doc : { "reason": "Subscription already deactivated"})
+      })
+      .catch(err => {
+        res.status(500).json({
+          reason: "Database error"
+        })
+      });
 
   }
   /**
@@ -299,7 +303,9 @@ class SubscriptionController {
         });
       })
       .then(doc => {
-        res.status(200).json(doc.nModified > 0 ? doc : {"reason":"User has no subscription active"})
+        res.status(200).json(doc.nModified > 0 ? doc : {
+          "reason": "User has no subscription active"
+        })
       }).catch(err => res.status(500).json({
         reason: "Database error" + err
       }));
