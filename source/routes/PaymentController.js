@@ -4,6 +4,7 @@ const Payment = require("../models/Payment");
 const Validators = require("../middlewares/Validators");
 const axios = require('axios');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { stripePaymentIntentsCreate } = require("../StripeCircuitBreaker");
 
 /**
  * @typedef Product
@@ -82,7 +83,7 @@ class PaymentController {
     // Obtengo el precio total a partir de la lista de productos extraida de la base de datos para evitar que se edite el precio en frontend
     const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0);
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await stripePaymentIntentsCreate.execute(stripe, {
       amount: totalPrice * 100,
       currency: 'eur',
       customer: customer.data.stripe_id,

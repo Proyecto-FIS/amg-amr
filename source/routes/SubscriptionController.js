@@ -3,7 +3,7 @@ const AuthorizeJWT = require("../middlewares/AuthorizeJWT");
 const Subscription = require("../models/Subscription");
 const Validators = require("../middlewares/Validators");
 const axios = require('axios');
-
+const { stripePaymentMethodsAttach, stripeCustomersUpdate, stripeSubscriptionsCreate, stripeWebhooksConstructEvent, stripeSubscriptionsDel } = require("../StripeCircuitBreaker");
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS;
@@ -111,7 +111,7 @@ class SubscriptionController {
     // Obtengo el precio total a partir de la lista de productos extraida de la base de datos para evitar que se edite el precio en frontend
     const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0);
 
-    const paymentMethodAttached = await stripe.paymentMethods.attach(
+    const paymentMethodAttached = await stripePaymentMethodsAttach.execute(stripe,
       payment_method_id, {
         customer: customer.data.stripe_id
       }
@@ -119,7 +119,7 @@ class SubscriptionController {
       console.log('¡Ha habido un error! ' + err);
     });
 
-    const customerStripe = await stripe.customers.update(
+    const customerStripe = await stripeCustomersUpdate.execute(stripe,
       customer.data.stripe_id, {
         invoice_settings: {
           default_payment_method: payment_method_id,
@@ -136,7 +136,7 @@ class SubscriptionController {
       return acc;
     }, []);
 
-    const subscription = await stripe.subscriptions.create({
+    const subscription = await stripeSubscriptionsCreate.execute(stripe, {
       customer: customer.data.stripe_id,
       items: prices,
       expand: ['latest_invoice.payment_intent']
@@ -197,7 +197,7 @@ class SubscriptionController {
     let event;
 
     try {
-      event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+      event = stripeWebhooksConstructEvent.execute(stripe, req.rawBody, sig, endpointSecret);
     } catch (err) {
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
@@ -220,7 +220,7 @@ class SubscriptionController {
   };
 
   async deleteStripeSubscription(transaction_subscription_id) {
-    return await stripe.subscriptions.del(
+    return await stripeSubscriptionsDel.execute(stripe,
       transaction_subscription_id
     ).catch(err => {
       console.log("Error Subscription Stripe Delete: " + err);
@@ -229,7 +229,7 @@ class SubscriptionController {
   async deleteAllStripeSubscription(subscriptions) {
     let n = 0;
     subscriptions.forEach((element) => {
-      stripe.subscriptions.del(
+      stripeSubscriptionsDel.execute(stripe,
         element.transaction_subscription_id
       ).catch(err => {
         console.log("Error Subscription Stripe Delete: " + err);
