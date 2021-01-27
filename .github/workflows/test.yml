@@ -33,4 +33,9 @@ jobs:
           USERS_MS: ${{secrets.USERS_MS}}
           TEST_USERNAME: ${{secrets.TEST_USERNAME}}
           TEST_PASSWORD: ${{secrets.TEST_PASSWORD}}
+          STRIPE_PUBLIC_KEY: ${{secrets.STRIPE_PUBLIC_KEY}}
+          STRIPE_SECRET_KEY: ${{secrets.STRIPE_SECRET_KEY}}
+          API_DELIVERIES_ENDPOINT: ${{secrets.API_DELIVERIES_ENDPOINT}}
+          API_PRODUCTS_ENDPOINT: ${{secrets.API_PRODUCTS_ENDPOINT}}
+          STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS: ${{secrets.STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS}}
           NODE_ENV: test
