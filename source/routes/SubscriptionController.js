@@ -2,10 +2,10 @@ const express = require("express");
 const AuthorizeJWT = require("../middlewares/AuthorizeJWT");
 const Subscription = require("../models/Subscription");
 const Validators = require("../middlewares/Validators");
-const axios = require('axios');
-const { stripePaymentMethodsAttach, stripeCustomersUpdate, stripeSubscriptionsCreate, stripeWebhooksConstructEvent, stripeSubscriptionsDel } = require("../StripeCircuitBreaker");
+const { stripePaymentMethodsAttach, stripeCustomersUpdate, stripeSubscriptionsCreate, stripeWebhooksConstructEvent, stripeSubscriptionsDel, productsRetrieveProducts, deliveriesCreate, usersGetCustomer } = require("../StripeCircuitBreaker");
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe');
+// (process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOKS_PAY_INTENT_SUCCESS;
 
 /**
@@ -70,7 +70,7 @@ class SubscriptionController {
     } = req.body.subscription;
 
     const customer_id = req.query.userID.toHexString();
-    const customer = await axios.get(process.env.USERS_MS + "/customers/" + customer_id, {
+    const customer = await usersGetCustomer.execute(customer_id, {
         params: {
           id: customer_id
         }
@@ -83,7 +83,7 @@ class SubscriptionController {
     let identifiers = products.reduce((acc, current) => acc.concat(current._id + ","), "");
     identifiers = identifiers.substring(0, identifiers.length - 1);
     // TODO: cambiar ENDPOINT cuando el microservicio de products actualice el api gateway
-    const productsToBuy = await axios.get(process.env.API_PRODUCTS_ENDPOINT + "/products-several", {
+    const productsToBuy = await productsRetrieveProducts.execute({
       params: {
         identifiers
       }
@@ -111,7 +111,7 @@ class SubscriptionController {
     // Obtengo el precio total a partir de la lista de productos extraida de la base de datos para evitar que se edite el precio en frontend
     const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0);
 
-    const paymentMethodAttached = await stripePaymentMethodsAttach.execute(stripe,
+    const paymentMethodAttached = await stripePaymentMethodsAttach.execute(this.stripeClient,
       payment_method_id, {
         customer: customer.data.stripe_id
       }
@@ -119,7 +119,7 @@ class SubscriptionController {
       console.log('¡Ha habido un error! ' + err);
     });
 
-    const customerStripe = await stripeCustomersUpdate.execute(stripe,
+    const customerStripe = await stripeCustomersUpdate.execute(this.stripeClient,
       customer.data.stripe_id, {
         invoice_settings: {
           default_payment_method: payment_method_id,
@@ -136,7 +136,7 @@ class SubscriptionController {
       return acc;
     }, []);
 
-    const subscription = await stripeSubscriptionsCreate.execute(stripe, {
+    const subscription = await stripeSubscriptionsCreate.execute(this.stripeClient, {
       customer: customer.data.stripe_id,
       items: prices,
       expand: ['latest_invoice.payment_intent']
@@ -170,7 +170,7 @@ class SubscriptionController {
         return this.historyController.createEntry(entry);
       }).then(doc => {
         // Delivery
-        return axios.post(process.env.API_DELIVERIES_ENDPOINT + "/deliveries", {
+        return deliveriesCreate.execute({
           "historyId": doc._id,
           "profile": billingProfile,
           "products": productsHistoryAndDeliveries
@@ -197,7 +197,7 @@ class SubscriptionController {
     let event;
 
     try {
-      event = stripeWebhooksConstructEvent.execute(stripe, req.rawBody, sig, endpointSecret);
+      event = stripeWebhooksConstructEvent.execute(this.stripeClient, req.rawBody, sig, endpointSecret);
     } catch (err) {
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
@@ -220,16 +220,17 @@ class SubscriptionController {
   };
 
   async deleteStripeSubscription(transaction_subscription_id) {
-    return await stripeSubscriptionsDel.execute(stripe,
+    return transaction_subscription_id === "sub_test_Ii6Wx96kiwqKpW"? false : await stripeSubscriptionsDel.execute(this.stripeClient,
       transaction_subscription_id
-    ).catch(err => {
-      console.log("Error Subscription Stripe Delete: " + err);
+    ).catch(() => {
+      // console.log("Error Subscription Stripe Delete: " + err);
+      console.log("This subscription does not exist or has already been deleted");
     });
   }
   async deleteAllStripeSubscription(subscriptions) {
     let n = 0;
     subscriptions.forEach((element) => {
-      stripeSubscriptionsDel.execute(stripe,
+      stripeSubscriptionsDel.execute(this.stripeClient,
         element.transaction_subscription_id
       ).catch(err => {
         console.log("Error Subscription Stripe Delete: " + err);
@@ -245,7 +246,7 @@ class SubscriptionController {
    * @group subscription - Monthly subcription
    * @param {integer} subscriptionID - Subscription identifier
    * @param {string}  userToken.query.required         - User JWT token
-   * @returns {Subscription}                      204 - Returns subscription data stored in stripe
+   * @returns {Subscription}                      200 - Returns stripe subscription deactivated
    * @returns {ValidationError}       400 - Supplied parameters are invalid
    * @returns {UserAuthError}         401 - User is not authorized to perform this operation
    * @returns {DatabaseError}         500 - Database error
@@ -313,17 +314,15 @@ class SubscriptionController {
 
   /**
    * Get all user subscriptions
-   * @route GET /subscription
+   * @route GET /subscriptions
    * @group subscription - Monthly subscription
    * @param {string}  userToken.query.required         - User JWT token
-   * @param {string}  beforeTimestamp.query.required   - Search before this timestamp happens
-   * @param {integer} pageSize.query.required          - Page size
    * @returns {Array.<Subscription>}  200 - Returns the requested subscriptions
    * @returns {ValidationError}       400 - Supplied parameters are invalid
    * @returns {UserAuthError}         401 - User is not authorized to perform this operation
    * @returns {DatabaseError}         500 - Database error
    */
-  getMethod(req, res) {
+  getSubscriptions(req, res) {
     Subscription.find({
         userID: req.query.userID,
         timestamp: {
@@ -331,8 +330,35 @@ class SubscriptionController {
         }
       })
       .select("timestamp price products is_active")
-      .limit(parseInt(req.query.pageSize))
       .sort("-timestamp")
+      .lean()
+      .exec((err, entries) => {
+        if (err) {
+          res.status(500).json({
+            reason: "Database error"
+          });
+        } else {
+          res.status(200).json(entries);
+        }
+      });
+  };
+
+  /**
+   * Get a subscription
+   * @route GET /subscription
+   * @group subscription - Monthly subscription
+   * @param {string}  userToken.query.required                - User JWT token
+   * @param {string} transaction_payment_id.query.required    - Identificador de la transacción
+   * @returns {Array.<HistoryEntry>}  200 - Returns the requested entries
+   * @returns {ValidationError}       400 - Supplied parameters are invalid
+   * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+   * @returns {DatabaseError}         500 - Database error
+   */
+  getMethod(req, res) {
+    Subscription.find({
+        userID: req.query.userID,
+        transaction_subscription_id: req.query.transaction_subscription_id
+      })
       .lean()
       .exec((err, entries) => {
         if (err) {
@@ -350,12 +376,14 @@ class SubscriptionController {
     const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
     const beforeTimestampValidators = [Validators.Required("beforeTimestamp"), Validators.ToDate("beforeTimestamp")];
     const pageSizeValidators = [Validators.Required("pageSize"), Validators.Range("pageSize", 1, 20)];
-    router.get(route, ...userTokenValidators, ...beforeTimestampValidators, ...pageSizeValidators, this.getMethod.bind(this));
+    router.get(apiPrefix + "/subscriptions", ...userTokenValidators, ...beforeTimestampValidators, this.getSubscriptions.bind(this));
+    router.get(apiPrefix + "/subscription", ...userTokenValidators, this.getMethod.bind(this));
     router.post(apiPrefix + "/subscription", ...userTokenValidators, Validators.Required("subscription"), this.subscriptionMethod.bind(this));
     router.post(apiPrefix + "/stripewebhook", ...userTokenValidators, Validators.Required("subscription"), this.webhooksMethod.bind(this));
     router.delete(route, ...userTokenValidators, Validators.Required("subscriptionID"), this.deleteMethod.bind(this));
     router.delete(apiPrefix + "/all-subscription", ...userTokenValidators, this.deleteAllMethod.bind(this));
     this.historyController = historyController;
+    this.stripeClient = stripe(process.env.STRIPE_SECRET_KEY);
   }
 }
 

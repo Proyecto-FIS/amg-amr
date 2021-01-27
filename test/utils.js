@@ -74,3 +74,11 @@ module.exports.authTestUser = () => {
         .catch(err => reject(err));
     });
 }
+
+module.exports.getTestProduct = (userToken) => {
+    return new Promise((resolve, reject) => {
+        axios.get(`${process.env.API_PRODUCTS_ENDPOINT}/products`)
+        .then(res => resolve(res))
+        .catch(err => reject(err));
+    });
+}

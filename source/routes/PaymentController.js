@@ -2,9 +2,13 @@ const express = require("express");
 const AuthorizeJWT = require("../middlewares/AuthorizeJWT");
 const Payment = require("../models/Payment");
 const Validators = require("../middlewares/Validators");
-const axios = require('axios');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { stripePaymentIntentsCreate } = require("../StripeCircuitBreaker");
+const stripe = require('stripe');
+const {
+  stripePaymentIntentsCreate,
+  productsRetrieveProducts,
+  deliveriesCreate,
+  usersGetCustomer
+} = require("../StripeCircuitBreaker");
 
 /**
  * @typedef Product
@@ -51,7 +55,11 @@ class PaymentController {
     } = req.body.payment;
 
     const customer_id = req.query.userID.toHexString();
-    const customer = await axios.get(process.env.USERS_MS + "/customers/" + customer_id, {params: {id: customer_id}})
+    const customer = await usersGetCustomer.execute(customer_id, {
+        params: {
+          id: customer_id
+        }
+      })
       .catch(error => {
         console.error(error)
       });
@@ -59,7 +67,7 @@ class PaymentController {
     let identifiers = products.reduce((acc, current) => acc.concat(current._id + ","), "");
     identifiers = identifiers.substring(0, identifiers.length - 1);
     // TODO: cambiar ENDPOINT cuando el microservicio de products actualice el api gateway
-    const productsToBuy = await axios.get(process.env.API_PRODUCTS_ENDPOINT + "/products-several", {
+    const productsToBuy = await productsRetrieveProducts.execute({
       params: {
         identifiers
       }
@@ -83,7 +91,7 @@ class PaymentController {
     // Obtengo el precio total a partir de la lista de productos extraida de la base de datos para evitar que se edite el precio en frontend
     const totalPrice = productsToBuy.reduce((totalPrice, product) => totalPrice + (product.quantity * product.unitPriceEuros), 0);
 
-    const paymentIntent = await stripePaymentIntentsCreate.execute(stripe, {
+    const paymentIntent = await stripePaymentIntentsCreate.execute(this.stripeClient, {
       amount: totalPrice * 100,
       currency: 'eur',
       customer: customer.data.stripe_id,
@@ -114,7 +122,7 @@ class PaymentController {
         return this.historyController.createEntry(entry);
       }).then(doc => {
         // Delivery
-        return axios.post(process.env.API_DELIVERIES_ENDPOINT + "/deliveries", {
+        return deliveriesCreate.execute({
           "historyId": doc._id,
           "profile": billingProfile,
           "products": productsToBuy
@@ -132,13 +140,64 @@ class PaymentController {
           reason: "Database error"
         })
       });
-
   };
+
+  /**
+   * Get a payment
+   * @route GET /payment
+   * @group payment - Products payments
+   * @param {string}  userToken.query.required                - User JWT token
+   * @param {string} transaction_payment_id.query.required    - Identificador de la transacción
+   * @returns {Array.<HistoryEntry>}  200 - Returns the requested entries
+   * @returns {ValidationError}       400 - Supplied parameters are invalid
+   * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+   * @returns {DatabaseError}         500 - Database error
+   */
+  getMethod(req, res) {
+    Payment.find({
+        userID: req.query.userID,
+        transaction_payment_id: req.query.transaction_payment_id
+      })
+      .lean()
+      .exec((err, entries) => {
+        if (err) {
+          res.status(500).json({
+            reason: "Database error"
+          });
+        } else {
+          res.status(200).json(entries);
+        }
+      });
+  };
+
+
+  /**
+   * Delete the payments for the logged user
+   * @route DELETE /payment
+   * @group payment - Payments per user
+   * @param {string}  userToken.query.required         - User JWT token
+   * @returns {}                      204 - Returns nothing
+   * @returns {ValidationError}       400 - Supplied parameters are invalid
+   * @returns {UserAuthError}         401 - User is not authorized to perform this operation
+   * @returns {DatabaseError}         500 - Database error
+   */
+  deleteMethod(req, res) {
+    Payment.deleteMany({
+        userID: req.query.userID
+      })
+      .then(() => res.sendStatus(204))
+      .catch(() => res.status(500).json({
+        reason: "Database error"
+      }));
+  }
 
   constructor(apiPrefix, router, historyController) {
     const userTokenValidators = [Validators.Required("userToken"), AuthorizeJWT];
+    router.get(apiPrefix + "/payment", ...userTokenValidators, this.getMethod.bind(this));
     router.post(apiPrefix + "/payment", ...userTokenValidators, Validators.Required("payment"), this.payMethod.bind(this));
+    router.delete(apiPrefix + "/payment", ...userTokenValidators, this.deleteMethod.bind(this));
     this.historyController = historyController;
+    this.stripeClient = stripe(process.env.STRIPE_SECRET_KEY);
   }
 }
 
